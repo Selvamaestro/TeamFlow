@@ -10,6 +10,6 @@ router.get("/", requireRole(["manager", "ceo"]), ctrl.listClients);
 router.get("/:id", requireRole(["manager", "ceo"]), ctrl.getClient);
 router.post("/", requireRole(["manager", "ceo"]), ctrl.createClient);
 router.patch("/:id", requireRole(["manager", "ceo"]), ctrl.updateClient);
-router.delete("/:id", requireRole(["ceo"]), ctrl.deleteClient);
+router.delete("/:id", requireRole(["manager", "ceo"]), ctrl.deleteClient);
 
 module.exports = router;

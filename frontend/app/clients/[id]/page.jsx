@@ -31,6 +31,7 @@ import {
     CheckCircle2,
     TrendingUp,
     ShieldCheck,
+    Trash2,
     Plus,
     Clock,
     FileText
@@ -44,6 +45,19 @@ export default function ClientDetailPage({ params }) {
     const [dbClient, setDbClient] = useState(null);
     const [dbProjects, setDbProjects] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDeleteClient = async () => {
+        if (confirm(`Are you sure you want to delete client "${client.name}" permanently from MongoDB database?`)) {
+            setIsDeleting(true);
+            try {
+                await clientService.deleteClient(clientId);
+            } catch (err) {
+                console.warn("Delete API info:", err.message);
+            }
+            router.push("/clients");
+        }
+    };
 
     // Initial mock data map fallback
     const mockClientDataMap = {
@@ -323,6 +337,13 @@ export default function ClientDetailPage({ params }) {
                             </button>
                             <button className="dashboard-btn-primary">
                                 <Edit size={16} /> Edit Client
+                            </button>
+                            <button
+                                onClick={handleDeleteClient}
+                                disabled={isDeleting}
+                                style={{ background: "#ba1a1a", color: "#fff", border: "none", borderRadius: "10px", padding: "10px 18px", fontWeight: "bold", fontSize: "14px", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
+                            >
+                                <Trash2 size={16} /> {isDeleting ? "Deleting..." : "Delete Client"}
                             </button>
                         </div>
                     </div>

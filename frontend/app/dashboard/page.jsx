@@ -34,15 +34,15 @@ export default function Dashboard() {
                         Dashboard
                     </Link>
 
-                    <a href="#">
+                    <Link href="/employees">
                         <Users size={20} />
                         Employees
-                    </a>
+                    </Link>
 
-                    <a href="#">
-                        <DollarSign size={20} />
+                    <Link href="/revenue">
+                        <Users size={20} />
                         Revenue
-                    </a>
+                    </Link>
 
                     <Link href="/projects">
                         <FolderKanban size={20} />

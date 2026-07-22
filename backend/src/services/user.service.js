@@ -1,5 +1,8 @@
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
+const Project = require("../models/Project");
+const Attendance = require("../models/Attendance");
+const Reward = require("../models/Reward");
 const conversationService = require("./conversation.service");
 
 class ForbiddenError extends Error {
@@ -40,7 +43,45 @@ async function listUsers(viewerRole, { department, role, status, search, page = 
     User.countDocuments(filter),
   ]);
 
-  return { users, total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) };
+ const enrichedUsers = await Promise.all(
+  users.map(async (user) => {
+    // Find current project
+    const project = await Project.findOne({
+      members: user._id,
+    });
+
+    // Count attendance records
+    const attendanceCount = await Attendance.countDocuments({
+      user: user._id,
+      status: "present",
+    });
+
+    // Calculate total reward points
+    const rewards = await Reward.find({
+      user: user._id,
+    });
+
+    const rewardScore = rewards.reduce(
+      (sum, reward) => sum + reward.points,
+      0
+    );
+
+    return {
+      ...user.toObject(),
+      currentProject: project?.title || "-",
+      attendance: attendanceCount,
+      rewardScore,
+    };
+  })
+);
+
+return {
+  users: enrichedUsers,
+  total,
+  page: pageNum,
+  limit: limitNum,
+  totalPages: Math.ceil(total / limitNum),
+};
 }
 
 // HR, Manager, CEO, self

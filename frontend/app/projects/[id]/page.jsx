@@ -4,6 +4,7 @@ import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import "../../dashboard/dashboard.css";
+import Sidebar from "@/components/Sidebar";
 import { projectService } from "../../../services/projectService";
 import {
     LayoutDashboard,
@@ -155,65 +156,7 @@ export default function ProjectDetailPage({ params }) {
     return (
         <div className="dashboard-container">
             {/* Sidebar */}
-            <aside className="sidebar">
-                <div className="logo">
-                    <h2>AdminSuite</h2>
-                    <p>Enterprise Management</p>
-                </div>
-
-                <nav className="menu">
-                    <Link href="/dashboard">
-                        <LayoutDashboard size={20} />
-                        Dashboard
-                    </Link>
-
-                    <a href="#">
-                        <Users size={20} />
-                        Employees
-                    </a>
-
-                    <a href="#">
-                        <DollarSign size={20} />
-                        Revenue
-                    </a>
-
-                    <Link href="/projects" className="active">
-                        <FolderKanban size={20} />
-                        Projects
-                    </Link>
-
-                    <Link href="/attendance">
-                        <CalendarDays size={20} />
-                        Attendance
-                    </Link>
-
-                    <a href="#">
-                        <MessageSquare size={20} />
-                        Chat
-                    </a>
-
-                    <Link href="/clients">
-                        <Building2 size={20} />
-                        Clients
-                    </Link>
-                </nav>
-
-                <div className="sidebar-bottom">
-                    <Link href="/projects/create" className="project-btn" style={{ textDecoration: "none" }}>
-                        <Plus size={18} />
-                        New Project
-                    </Link>
-
-                    <a href="#">
-                        <Settings size={18} />
-                        Settings
-                    </a>
-                    <a href="#">
-                        <LogOut size={18} />
-                        Logout
-                    </a>
-                </div>
-            </aside>
+            <Sidebar active="projects" />
 
             {/* Main Content Area */}
             <div className="main-content">

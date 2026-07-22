@@ -15,172 +15,112 @@ import {
     LogOut,
     Search,
     Bell,
-    CircleHelp,
+    Mail,
     Plus,
-    UploadCloud,
-    Check,
-    FileText,
-    MessageCircle,
-    X,
-    Filter,
-    MoreVertical
+    Calendar,
+    Star,
+    Folder,
+    Archive
 } from "lucide-react";
 
 export default function ProjectsPage() {
-    const [activeTab, setActiveTab] = useState("create"); // "create" or "list"
-    const [filterCategory, setFilterCategory] = useState("all");
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [submitSuccess, setSubmitSuccess] = useState(false);
-    const [dragActive, setDragActive] = useState(false);
-    const [uploadedFiles, setUploadedFiles] = useState([]);
-    const [createChatGroup, setCreateChatGroup] = useState(true);
+    const [selectedCategory, setSelectedCategory] = useState("active");
+    const [searchQuery, setSearchQuery] = useState("");
 
-    // Form data state
-    const [formData, setFormData] = useState({
-        title: "",
-        description: "",
-        clientName: "",
-        clientEmail: "",
-        teamLeader: "",
-        dueDate: "",
-    });
-
-    // Sample initial project list for the "All Projects" view
-    const [projectsList, setProjectsList] = useState([
+    // Main Projects List matching admin_project.html
+    const [projects] = useState([
         {
             id: 1,
-            title: "Infrastructure Alpha",
-            client: "Global Dynamics Inc.",
-            leader: "Alex Mercer",
-            dueDate: "Oct 24, 2024",
-            status: "On Track",
-            progress: 78,
-            budget: "$120,000",
-            category: "active"
+            title: "Q4 Logistics Revamp",
+            client: "SwiftShip Logistics",
+            lead: "Marcus J.",
+            leadAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80",
+            status: "In Progress",
+            statusType: "blue",
+            progress: 65,
+            dueDate: "Dec 15, 2023",
+            actionLabel: "View Details",
+            category: "active",
+            starred: true
         },
         {
             id: 2,
-            title: "Cloud Migration V2",
-            client: "Stratosphere Systems",
-            leader: "Sarah Jenkins",
-            dueDate: "Nov 15, 2024",
-            status: "At Risk",
-            progress: 45,
-            budget: "$85,000",
-            category: "in-progress"
+            title: "Global ERP Integration",
+            client: "TerraCorp Industries",
+            lead: "Sarah Chen",
+            leadAvatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80",
+            status: "Completed",
+            statusType: "green",
+            progress: 100,
+            dueDate: "Oct 28, 2023",
+            actionLabel: "View Archive",
+            category: "active",
+            starred: true
         },
         {
             id: 3,
-            title: "CRISPR Dashboard",
-            client: "Lumina Bio-Tech",
-            leader: "Marcus Vane",
-            dueDate: "Dec 01, 2024",
+            title: "Mobile Banking UX",
+            client: "Apex Bank",
+            lead: "Elena Rodriguez",
+            leadAvatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&auto=format&fit=crop&q=80",
             status: "Delayed",
-            progress: 30,
-            budget: "$210,000",
-            category: "in-progress"
+            statusType: "red",
+            progress: 42,
+            dueDate: "Nov 10, 2023",
+            actionLabel: "Review Blockers",
+            category: "active",
+            starred: false
         },
         {
             id: 4,
-            title: "CRM Integration",
-            client: "Apex Real Estate",
-            leader: "Elena Rodriguez",
-            dueDate: "Jan 10, 2025",
-            status: "On Track",
-            progress: 92,
-            budget: "$45,000",
-            category: "completed"
+            title: "Hiring Dashboard V2",
+            client: "Internal Operations",
+            lead: "Alex Mercer",
+            leadAvatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&auto=format&fit=crop&q=80",
+            status: "In Progress",
+            statusType: "blue",
+            progress: 80,
+            dueDate: "Jan 15, 2024",
+            actionLabel: "View Details",
+            category: "active",
+            starred: true
+        },
+        {
+            id: 5,
+            title: "Legacy System Migration",
+            client: "OldGuard Inc.",
+            lead: "David Miller",
+            leadAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80",
+            status: "Archived",
+            statusType: "gray",
+            progress: 100,
+            dueDate: "Jun 20, 2023",
+            actionLabel: "View Details",
+            category: "archived",
+            starred: false
         }
     ]);
 
-    // Drag and drop handlers
-    const handleDrag = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.type === "dragenter" || e.type === "dragover") {
-            setDragActive(true);
-        } else if (e.type === "dragleave") {
-            setDragActive(false);
-        }
-    };
-
-    const handleDrop = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setDragActive(false);
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            const newFiles = Array.from(e.dataTransfer.files).map(f => f.name);
-            setUploadedFiles(prev => [...prev, ...newFiles]);
-        }
-    };
-
-    const handleFileInput = (e) => {
-        if (e.target.files && e.target.files[0]) {
-            const newFiles = Array.from(e.target.files).map(f => f.name);
-            setUploadedFiles(prev => [...prev, ...newFiles]);
-        }
-    };
-
-    const removeFile = (index) => {
-        setUploadedFiles(prev => prev.filter((_, i) => i !== index));
-    };
-
-    // Form submission handler
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        setIsSubmitting(true);
-
-        setTimeout(() => {
-            setIsSubmitting(false);
-            setSubmitSuccess(true);
-
-            if (formData.title) {
-                setProjectsList(prev => [
-                    {
-                        id: Date.now(),
-                        title: formData.title,
-                        client: formData.clientName || "General Client",
-                        leader: formData.teamLeader || "Alex Mercer",
-                        dueDate: formData.dueDate || "Nov 30, 2024",
-                        status: "On Track",
-                        progress: 10,
-                        budget: "$95,000",
-                        category: "active"
-                    },
-                    ...prev
-                ]);
-            }
-
-            setTimeout(() => {
-                setSubmitSuccess(false);
-                setFormData({
-                    title: "",
-                    description: "",
-                    clientName: "",
-                    clientEmail: "",
-                    teamLeader: "",
-                    dueDate: "",
-                });
-                setUploadedFiles([]);
-            }, 2500);
-        }, 1200);
-    };
-
-    const filteredProjects = projectsList.filter(p => {
-        if (filterCategory === "all") return true;
-        if (filterCategory === "active") return p.status === "On Track";
-        if (filterCategory === "in-progress") return p.status === "At Risk" || p.status === "Delayed";
-        if (filterCategory === "completed") return p.status === "Completed" || p.progress >= 90;
-        return true;
+    const filteredProjects = projects.filter(p => {
+        const matchesCategory =
+            selectedCategory === "active" ? p.category === "active" :
+            selectedCategory === "archived" ? p.category === "archived" : true;
+        const matchesSearch =
+            p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.lead.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesCategory && matchesSearch;
     });
+
+    const starredProjects = projects.filter(p => p.starred);
 
     return (
         <div className="dashboard-container">
             {/* Sidebar */}
             <aside className="sidebar">
                 <div className="logo">
-                    <h2>AdminPanel</h2>
-                    <p>Management Suite</p>
+                    <h2>AdminSuite</h2>
+                    <p>Enterprise Management</p>
                 </div>
 
                 <nav className="menu">
@@ -221,14 +161,14 @@ export default function ProjectsPage() {
                 </nav>
 
                 <div className="sidebar-bottom">
-                    <button className="project-btn" onClick={() => setActiveTab("create")}>
+                    <Link href="/projects/create" className="project-btn" style={{ textDecoration: "none" }}>
                         <Plus size={18} />
                         New Project
-                    </button>
+                    </Link>
 
                     <a href="#">
                         <Settings size={18} />
-                        Settings
+                        System Settings
                     </a>
                     <a href="#">
                         <LogOut size={18} />
@@ -237,7 +177,7 @@ export default function ProjectsPage() {
                 </div>
             </aside>
 
-            {/* Main Content */}
+            {/* Main Content Area */}
             <div className="main-content">
                 {/* Header */}
                 <header className="header">
@@ -245,264 +185,185 @@ export default function ProjectsPage() {
                         <Search className="search-icon" size={18} />
                         <input
                             type="text"
-                            placeholder="Search projects, leaders, clients..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search projects, clients..."
                         />
                     </div>
 
                     <div className="header-right">
                         <Bell className="icons" />
-                        <CircleHelp className="icons" />
+                        <Mail className="icons" />
 
                         <div className="profile">
                             <img
-                                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-                                alt="Alex Thompson"
+                                src="https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&auto=format&fit=crop&q=80"
+                                alt="Alex Mercer"
                             />
                             <div>
-                                <h4>Alex Thompson</h4>
-                                <span>Administrator</span>
+                                <h4>Alex Mercer</h4>
+                                <span>CEO &amp; Product Head</span>
                             </div>
                         </div>
                     </div>
                 </header>
 
-                {/* Dashboard Page Body */}
-                <div className="dashboard">
-                    <div className="title-actions">
-                        <div className="title">
-                            <h1>{activeTab === "create" ? "Create New Project" : "Projects Management"}</h1>
-                            <p>
-                                {activeTab === "create"
-                                    ? "Initialize a new venture by providing core details, assigning a lead, and setting milestones."
-                                    : "Overview of all active enterprise projects, deliverables, and milestone statuses."
-                                }
-                            </p>
-                        </div>
+                {/* Main Body Layout with Secondary Nested Panel */}
+                <div style={{ display: "flex", paddingTop: "80px", minHeight: "100vh" }}>
+                    {/* SECONDARY NESTED PANEL */}
+                    <aside className="secondary-panel">
+                        <Link
+                            href="/projects/create"
+                            className="dashboard-btn-primary"
+                            style={{ width: "100%", justifyCenter: "center", padding: "14px", textDecoration: "none" }}
+                        >
+                            <Plus size={18} /> Create Project
+                        </Link>
 
-                        <div className="tab-switcher">
-                            <button
-                                onClick={() => setActiveTab("create")}
-                                className={activeTab === "create" ? "tab-active" : ""}
-                            >
-                                + Create Project
-                            </button>
-                            <button
-                                onClick={() => setActiveTab("list")}
-                                className={activeTab === "list" ? "tab-active" : ""}
-                            >
-                                All Projects ({projectsList.length})
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* TAB 1: CREATE PROJECT FORM */}
-                    {activeTab === "create" && (
-                        <div className="dashboard-form-card">
-                            <form onSubmit={handleSubmit} className="form-grid">
-                                <div className="form-group full-width">
-                                    <label>Project Title *</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={formData.title}
-                                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                        placeholder="e.g. Q4 Global Market Analysis"
-                                    />
-                                </div>
-
-                                <div className="form-group full-width">
-                                    <label>Project Description</label>
-                                    <textarea
-                                        rows={4}
-                                        value={formData.description}
-                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                        placeholder="Describe the project goals, scope, and key deliverables..."
-                                    ></textarea>
-                                </div>
-
-                                <div className="form-group">
-                                    <label>Client Name</label>
-                                    <select
-                                        value={formData.clientName}
-                                        onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
-                                    >
-                                        <option value="">Select a client</option>
-                                        <option value="Global Dynamics Inc.">Global Dynamics Inc.</option>
-                                        <option value="Stratosphere Systems">Stratosphere Systems</option>
-                                        <option value="Lumina Bio-Tech">Lumina Bio-Tech</option>
-                                        <option value="Apex Real Estate">Apex Real Estate</option>
-                                    </select>
-                                </div>
-
-                                <div className="form-group">
-                                    <label>Client Email</label>
-                                    <input
-                                        type="email"
-                                        value={formData.clientEmail}
-                                        onChange={(e) => setFormData({ ...formData, clientEmail: e.target.value })}
-                                        placeholder="contact@client.com"
-                                    />
-                                </div>
-
-                                <div className="form-group">
-                                    <label>Team Leader</label>
-                                    <select
-                                        value={formData.teamLeader}
-                                        onChange={(e) => setFormData({ ...formData, teamLeader: e.target.value })}
-                                    >
-                                        <option value="">Assign a leader</option>
-                                        <option value="Sarah Jenkins">Sarah Jenkins (Engineering)</option>
-                                        <option value="Marcus Vane">Marcus Vane (Product Lead)</option>
-                                        <option value="Elena Rodriguez">Elena Rodriguez (Marketing)</option>
-                                        <option value="Alex Mercer">Alex Mercer (Operations)</option>
-                                    </select>
-                                </div>
-
-                                <div className="form-group">
-                                    <label>Due Date</label>
-                                    <input
-                                        type="date"
-                                        value={formData.dueDate}
-                                        onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                                    />
-                                </div>
-
-                                {/* Drag & Drop Documents */}
-                                <div className="form-group full-width">
-                                    <label>Project Documents</label>
+                        <div>
+                            <h3>All Projects</h3>
+                            <ul className="secondary-nav-list">
+                                <li>
                                     <div
-                                        onDragEnter={handleDrag}
-                                        onDragOver={handleDrag}
-                                        onDragLeave={handleDrag}
-                                        onDrop={handleDrop}
-                                        className={`drop-zone ${dragActive ? "active" : ""}`}
+                                        onClick={() => setSelectedCategory("active")}
+                                        className={`secondary-nav-item ${selectedCategory === "active" ? "active" : ""}`}
                                     >
-                                        <UploadCloud size={36} color="#002045" />
-                                        <p style={{ fontWeight: 600, color: "#002045" }}>Click or drag and drop to upload files</p>
-                                        <span style={{ fontSize: "13px", color: "#777" }}>PDF, DOCX, XLSX (max 50MB per file)</span>
-                                        <input
-                                            type="file"
-                                            multiple
-                                            onChange={handleFileInput}
-                                            style={{ display: "none" }}
-                                            id="file-upload-input"
-                                        />
-                                        <label
-                                            htmlFor="file-upload-input"
-                                            className="dashboard-btn-secondary"
-                                            style={{ marginTop: "10px" }}
-                                        >
-                                            Browse Files
-                                        </label>
+                                        <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                            <Folder size={18} /> Active Initiatives
+                                        </span>
+                                        <span className="badge green" style={{ fontSize: "11px", padding: "2px 8px" }}>
+                                            {projects.filter(p => p.category === "active").length}
+                                        </span>
                                     </div>
-
-                                    {uploadedFiles.length > 0 && (
-                                        <div style={{ marginTop: "15px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                                            {uploadedFiles.map((filename, idx) => (
-                                                <div key={idx} style={{ background: "#eef4ff", padding: "6px 12px", borderRadius: "8px", fontSize: "13px", color: "#002045", display: "flex", alignItems: "center", gap: "6px" }}>
-                                                    <FileText size={14} />
-                                                    <span>{filename}</span>
-                                                    <X size={14} style={{ cursor: "pointer" }} onClick={() => removeFile(idx)} />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Toggle */}
-                                <div className="form-group full-width" style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", background: "#f8fafc", padding: "18px 24px", borderRadius: "12px", border: "1px solid #eee" }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-                                        <div className="icon-box project-icon">
-                                            <MessageCircle size={22} color="#002045" />
-                                        </div>
-                                        <div>
-                                            <h4 style={{ fontSize: "15px", color: "#002045" }}>Create background group chat for this project</h4>
-                                            <p style={{ fontSize: "13px", color: "#777" }}>Automatically add team members to a secure project channel</p>
-                                        </div>
+                                </li>
+                                <li>
+                                    <div
+                                        onClick={() => setSelectedCategory("archived")}
+                                        className={`secondary-nav-item ${selectedCategory === "archived" ? "active" : ""}`}
+                                    >
+                                        <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                            <Archive size={18} /> Archived
+                                        </span>
                                     </div>
-                                    <input
-                                        type="checkbox"
-                                        checked={createChatGroup}
-                                        onChange={(e) => setCreateChatGroup(e.target.checked)}
-                                        style={{ width: "20px", height: "20px", cursor: "pointer", accentColor: "#002045" }}
-                                    />
-                                </div>
-
-                                {/* Form Actions */}
-                                <div className="form-group full-width" style={{ flexDirection: "row", justifyContent: "flex-end", gap: "15px", paddingTop: "20px", borderTop: "1px solid #eee" }}>
-                                    <button
-                                        type="button"
-                                        className="dashboard-btn-secondary"
-                                        onClick={() => setActiveTab("list")}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={isSubmitting}
-                                        className="dashboard-btn-primary"
-                                    >
-                                        {isSubmitting ? "Processing..." : submitSuccess ? "Project Initialized!" : "Initialize Project"}
-                                    </button>
-                                </div>
-                            </form>
+                                </li>
+                            </ul>
                         </div>
-                    )}
 
-                    {/* TAB 2: ALL PROJECTS LIST */}
-                    {activeTab === "list" && (
-                        <div style={{ marginTop: "30px" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#fff", padding: "18px 25px", borderRadius: "14px", boxShadow: "0 5px 20px rgba(0, 0, 0, 0.05)", marginBottom: "25px" }}>
-                                <div className="tab-switcher">
-                                    <button onClick={() => setFilterCategory("all")} className={filterCategory === "all" ? "tab-active" : ""}>All ({projectsList.length})</button>
-                                    <button onClick={() => setFilterCategory("active")} className={filterCategory === "active" ? "tab-active" : ""}>On Track</button>
-                                    <button onClick={() => setFilterCategory("in-progress")} className={filterCategory === "in-progress" ? "tab-active" : ""}>Needs Attention</button>
-                                    <button onClick={() => setFilterCategory("completed")} className={filterCategory === "completed" ? "tab-active" : ""}>Completed</button>
-                                </div>
-                                <button className="dashboard-btn-secondary" style={{ padding: "8px 16px", fontSize: "13px" }}>
-                                    <Filter size={14} /> Filter
-                                </button>
-                            </div>
-
-                            <div className="kpi-grid">
-                                {filteredProjects.map((p) => (
-                                    <div key={p.id} className="kpi-card">
-                                        <div className="card-top">
-                                            <div className="icon-box project-icon">
-                                                <FolderKanban size={24} color="#002045" />
-                                            </div>
-                                            <span className={`badge ${p.status === "On Track" ? "green" : "yellow"}`}>
-                                                {p.status}
+                        <div>
+                            <h3>Important Projects</h3>
+                            <ul className="secondary-nav-list">
+                                {starredProjects.map(p => (
+                                    <li key={p.id}>
+                                        <div className="secondary-nav-item">
+                                            <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                                <Star size={16} fill="#f4c430" stroke="#f4c430" />
+                                                <span style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap", maxWidth: "160px" }}>
+                                                    {p.title}
+                                                </span>
                                             </span>
                                         </div>
-                                        <div className="card-title">{p.client}</div>
-                                        <h2 style={{ fontSize: "24px", marginBottom: "10px" }}>{p.title}</h2>
-                                        
-                                        <div style={{ marginBottom: "15px" }}>
-                                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#666", marginBottom: "6px" }}>
-                                                <span>Progress</span>
-                                                <span style={{ fontWeight: "bold", color: "#002045" }}>{p.progress}%</span>
-                                            </div>
-                                            <div className="progress">
-                                                <div className="progress-fill employee-progress" style={{ width: `${p.progress}%` }}></div>
-                                            </div>
-                                        </div>
-
-                                        <div style={{ display: "flex", justifyBetween: "space-between", paddingTop: "15px", borderTop: "1px solid #eee", fontSize: "13px", color: "#666" }}>
-                                            <div>
-                                                <span>Lead: </span>
-                                                <strong style={{ color: "#002045" }}>{p.leader}</strong>
-                                            </div>
-                                            <div>
-                                                <span>Due: </span>
-                                                <strong style={{ color: "#002045" }}>{p.dueDate}</strong>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    </li>
                                 ))}
+                            </ul>
+                        </div>
+                    </aside>
+
+                    {/* CANVAS AREA */}
+                    <div style={{ flex: 1, padding: "35px 40px", overflowY: "auto", background: "#f8fafc" }}>
+                        {/* Detail View Header */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px" }}>
+                            <div>
+                                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
+                                    <h1 style={{ color: "#002045", fontSize: "36px", margin: 0 }}>
+                                        {selectedCategory === "active" ? "Active Initiatives" : "Archived Projects"}
+                                    </h1>
+                                    <span className="badge green">In Progress</span>
+                                </div>
+                                <p style={{ color: "#666", fontSize: "16px" }}>
+                                    Overview of all high-priority corporate projects currently in development phase.
+                                </p>
+                            </div>
+
+                            {/* Avatars */}
+                            <div className="avatars">
+                                <span style={{ backgroundImage: "url(https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80)", backgroundSize: "cover" }}></span>
+                                <span style={{ backgroundImage: "url(https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80)", backgroundSize: "cover" }}></span>
+                                <span style={{ backgroundImage: "url(https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80)", backgroundSize: "cover" }}></span>
+                                <div className="more">+8</div>
                             </div>
                         </div>
-                    )}
+
+                        {/* PROJECTS GRID */}
+                        <div className="kpi-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))" }}>
+                            {filteredProjects.map((p) => (
+                                <div key={p.id} className="kpi-card">
+                                    <div className="card-top">
+                                        <div>
+                                            <h3 style={{ color: "#002045", fontSize: "20px", marginBottom: "4px" }}>{p.title}</h3>
+                                            <span style={{ fontSize: "13px", color: "#777" }}>Client: {p.client}</span>
+                                        </div>
+                                        <span className={`badge ${p.statusType === "green" ? "green" : p.statusType === "red" ? "yellow" : "badge"}`} style={{ background: p.statusType === "red" ? "#ffeaea" : undefined, color: p.statusType === "red" ? "#d63031" : undefined }}>
+                                            {p.status}
+                                        </span>
+                                    </div>
+
+                                    <div style={{ display: "flex", alignItems: "center", gap: "10px", margin: "20px 0" }}>
+                                        <img src={p.leadAvatar} alt={p.lead} style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover" }} />
+                                        <span style={{ fontSize: "14px", color: "#333", fontWeight: 500 }}>Lead: {p.lead}</span>
+                                    </div>
+
+                                    <div style={{ marginBottom: "20px" }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#666", marginBottom: "6px" }}>
+                                            <span>Progress</span>
+                                            <strong style={{ color: p.statusType === "red" ? "#d63031" : "#002045" }}>{p.progress}%</strong>
+                                        </div>
+                                        <div className="progress">
+                                            <div
+                                                className="progress-fill employee-progress"
+                                                style={{
+                                                    width: `${p.progress}%`,
+                                                    background: p.statusType === "green" ? "#169c52" : p.statusType === "red" ? "#d63031" : "#002045"
+                                                }}
+                                            ></div>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: "flex", justifyBetween: "space-between", alignItems: "center", paddingTop: "15px", borderTop: "1px solid #eee" }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "#777" }}>
+                                            <Calendar size={15} /> {p.dueDate}
+                                        </div>
+                                        <button style={{ background: "none", border: "none", color: p.statusType === "red" ? "#d63031" : "#002045", fontWeight: "bold", cursor: "pointer", fontSize: "14px" }}>
+                                            {p.actionLabel}
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+
+                            {/* Dashed New Initiative Card Slot */}
+                            <Link
+                                href="/projects/create"
+                                className="kpi-card"
+                                style={{
+                                    border: "2px dashed #cbd5e1",
+                                    boxShadow: "none",
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    cursor: "pointer",
+                                    minHeight: "240px",
+                                    background: "#fff",
+                                    textDecoration: "none"
+                                }}
+                            >
+                                <div className="icon-box project-icon" style={{ marginBottom: "15px" }}>
+                                    <Plus size={28} color="#002045" />
+                                </div>
+                                <h3 style={{ color: "#002045", fontSize: "18px", marginBottom: "4px" }}>New Initiative</h3>
+                                <p style={{ color: "#777", fontSize: "13px" }}>Start a new project workflow</p>
+                            </Link>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

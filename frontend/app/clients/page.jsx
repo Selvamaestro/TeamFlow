@@ -31,15 +31,66 @@ import {
     Send,
     Check,
     X,
-    Trash2
+    Trash2,
+    Clock,
+    FileText
 } from "lucide-react";
 
 export default function ClientsPage() {
     const [selectedClientIndex, setSelectedClientIndex] = useState(0);
     const [searchQuery, setSearchQuery] = useState("");
-    const [showNewClientModal, setShowNewClientModal] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [feedbackText, setFeedbackText] = useState("");
     const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+
+    // Live Clients State loaded exclusively from MongoDB database
+    const [clientsList, setClientsList] = useState([]);
+
+    // Fetch live MongoDB clients from backend clientService on mount
+    useEffect(() => {
+        async function fetchDbClients() {
+            setIsLoading(true);
+            try {
+                const res = await clientService.getClients();
+                if (res && res.clients && Array.isArray(res.clients)) {
+                    const mappedDbClients = res.clients.map(c => {
+                        const companyName = c.company || c.name || "Client Account";
+                        const words = companyName.split(" ");
+                        const initials = words.length >= 2 ? (words[0][0] + words[1][0]).toUpperCase() : companyName.substring(0, 2).toUpperCase();
+
+                        return {
+                            id: c._id || c.id,
+                            name: companyName,
+                            initials: initials,
+                            contactName: c.name || "Primary Contact",
+                            email: c.email || "contact@client.com",
+                            phone: c.phone || "+1 (555) 000-1111",
+                            website: c.website || `${companyName.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`,
+                            project: "Enterprise Engagement",
+                            status: c.status === "inactive" ? "Inactive" : "Active",
+                            rating: 5.0,
+                            badge: c.status === "inactive" ? "Inactive Account" : "Key Account",
+                            since: c.createdAt ? new Date(c.createdAt).getFullYear().toString() : "2026",
+                            progress: 80,
+                            deadline: "Dec 31, 2026",
+                            quote: c.notes || "Registered in MongoDB database.",
+                            iconType: "corporate",
+                            touchpoints: [
+                                { title: "Client Registered in Database", time: c.createdAt ? new Date(c.createdAt).toLocaleDateString() : "Live Database Record" }
+                            ]
+                        };
+                    });
+
+                    setClientsList(mappedDbClients);
+                }
+            } catch (err) {
+                console.warn("Database client fetch info:", err.message);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+        fetchDbClients();
+    }, []);
 
     const handleDeleteClient = async (e, id, name) => {
         if (e) e.stopPropagation();
@@ -54,183 +105,24 @@ export default function ClientsPage() {
         }
     };
 
-    // Initial Clients Data
-    const [clientsList, setClientsList] = useState([
-        {
-            id: 1,
-            name: "Global Dynamics Inc.",
-            email: "contact@globaldyn.com",
-            phone: "+1 (555) 012-9988",
-            website: "www.globaldyn.com",
-            project: "Infrastructure Alpha",
-            status: "Active",
-            rating: 5.0,
-            badge: "Key Account",
-            since: "2021",
-            progress: 78,
-            deadline: "Oct 24, 2024",
-            quote: "The team at AdminSuite has consistently exceeded our expectations for scalability and responsiveness. Our infrastructure migration was handled with professional precision.",
-            iconType: "corporate",
-            touchpoints: [
-                { title: "Quarterly Business Review", time: "Yesterday, 2:30 PM • Zoom Meeting" },
-                { title: "Phase 2 Sign-off Received", time: "Aug 12, 2024 • Email Transaction" },
-                { title: "New Account Manager Assigned", time: "Aug 05, 2024 • System Event" }
-            ]
-        },
-        {
-            id: 2,
-            name: "Stratosphere Systems",
-            email: "billing@stratosphere.io",
-            phone: "+1 (555) 345-6789",
-            website: "www.stratosphere.io",
-            project: "Cloud Migration V2",
-            status: "In Review",
-            rating: 4.5,
-            badge: "Growth Partner",
-            since: "2022",
-            progress: 45,
-            deadline: "Nov 15, 2024",
-            quote: "Exceptional architecture planning and seamless backend integration across multi-cloud regions.",
-            iconType: "cloud",
-            touchpoints: [
-                { title: "Architecture Review Meeting", time: "3 days ago • In-Person" },
-                { title: "AWS Cost Optimization Report", time: "Jul 28, 2024 • PDF Shared" }
-            ]
-        },
-        {
-            id: 3,
-            name: "Lumina Bio-Tech",
-            email: "ops@lumina.com",
-            phone: "+1 (555) 987-6543",
-            website: "www.lumina.com",
-            project: "CRISPR Dashboard",
-            status: "Delayed",
-            rating: 3.5,
-            badge: "Enterprise",
-            since: "2023",
-            progress: 30,
-            deadline: "Dec 01, 2024",
-            quote: "Solid core system, working together to streamline genomic data pipeline speeds.",
-            iconType: "dna",
-            touchpoints: [
-                { title: "Security Compliance Audit", time: "1 week ago • Audit Report" }
-            ]
-        },
-        {
-            id: 4,
-            name: "Apex Real Estate",
-            email: "mktg@apex.net",
-            phone: "+1 (555) 456-1122",
-            website: "www.apex.net",
-            project: "CRM Integration",
-            status: "On Hold",
-            rating: 4.0,
-            badge: "Standard",
-            since: "2023",
-            progress: 92,
-            deadline: "Jan 10, 2025",
-            quote: "Smooth property listing workflow synchronization across our regional broker teams.",
-            iconType: "home",
-            touchpoints: [
-                { title: "Contract Renewal Discussions", time: "2 weeks ago • Phone Call" }
-            ]
-        }
-    ]);
-
-    // Fetch live MongoDB clients from backend clientService on mount
-    useEffect(() => {
-        async function fetchDbClients() {
-            try {
-                const res = await clientService.getClients();
-                if (res && res.clients && Array.isArray(res.clients) && res.clients.length > 0) {
-                    const mappedDbClients = res.clients.map(c => ({
-                        id: c._id || c.id,
-                        name: c.company || c.name,
-                        email: c.email || "contact@client.com",
-                        phone: c.phone || "+1 (555) 000-1111",
-                        website: c.website || "www.client.com",
-                        project: "Enterprise System Integration",
-                        status: c.status === "active" ? "Active" : "Inactive",
-                        rating: 5.0,
-                        badge: "Key Account",
-                        since: "2024",
-                        progress: 50,
-                        deadline: "Dec 31, 2024",
-                        quote: c.notes || "Active enterprise client registered in database.",
-                        iconType: "corporate",
-                        touchpoints: [
-                            { title: "Client Registered in Database", time: "Live Database Record" }
-                        ]
-                    }));
-
-                    setClientsList(prev => {
-                        const existingIds = new Set(prev.map(p => p.id));
-                        const newEntries = mappedDbClients.filter(m => !existingIds.has(m.id));
-                        return [...newEntries, ...prev];
-                    });
-                }
-            } catch (err) {
-                console.log("Database client fetch info:", err.message);
-            }
-        }
-        fetchDbClients();
-    }, []);
-
-    // Modal Form State
-    const [newClientForm, setNewClientForm] = useState({
-        name: "",
-        email: "",
-        phone: "",
-        website: "",
-        project: "",
-        badge: "Key Account"
-    });
-
-    const handleCreateClient = (e) => {
+    const handleSendFeedback = (e) => {
         e.preventDefault();
-        if (!newClientForm.name) return;
+        if (!feedbackText.trim()) return;
 
-        const created = {
-            id: Date.now(),
-            name: newClientForm.name,
-            email: newClientForm.email || "info@company.com",
-            phone: newClientForm.phone || "+1 (555) 000-1111",
-            website: newClientForm.website || "www.company.com",
-            project: newClientForm.project || "New System Integration",
-            status: "Active",
-            rating: 5.0,
-            badge: newClientForm.badge,
-            since: "2024",
-            progress: 15,
-            deadline: "Dec 31, 2024",
-            quote: "Excited to partner with AdminSuite on our upcoming digital transformation initiative.",
-            iconType: "corporate",
-            touchpoints: [
-                { title: "Onboarding Call Completed", time: "Just Now • Welcome Call" }
-            ]
+        setFeedbackSubmitted(true);
+        const newTouchpoint = {
+            title: `Feedback: "${feedbackText}"`,
+            time: "Just now • Executive Note"
         };
 
-        setClientsList(prev => [created, ...prev]);
-        setSelectedClientIndex(0);
-        setShowNewClientModal(false);
-        setNewClientForm({ name: "", email: "", phone: "", website: "", project: "", badge: "Key Account" });
-    };
-
-    const handleSendFeedback = () => {
-        if (!feedbackText.trim()) return;
-        setFeedbackSubmitted(true);
-
-        setClientsList(prev => prev.map((c, i) => {
-            if (i === selectedClientIndex) {
+        setClientsList(prev => prev.map((item, idx) => {
+            if (idx === selectedClientIndex) {
                 return {
-                    ...c,
-                    touchpoints: [
-                        { title: `Feedback Logged: "${feedbackText.substring(0, 30)}..."`, time: "Just Now • Direct Feedback" },
-                        ...c.touchpoints
-                    ]
+                    ...item,
+                    touchpoints: [newTouchpoint, ...(item.touchpoints || [])]
                 };
             }
-            return c;
+            return item;
         }));
 
         setTimeout(() => {
@@ -241,8 +133,8 @@ export default function ClientsPage() {
 
     const filteredClients = clientsList.filter(c =>
         c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.project.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.email.toLowerCase().includes(searchQuery.toLowerCase())
+        c.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.contactName.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     const selectedClient = filteredClients[selectedClientIndex] || filteredClients[0] || clientsList[0];
@@ -252,8 +144,8 @@ export default function ClientsPage() {
             {/* Sidebar */}
             <aside className="sidebar">
                 <div className="logo">
-                    <h2>AdminPanel</h2>
-                    <p>Management Suite</p>
+                    <h2>AdminSuite</h2>
+                    <p>Enterprise Management</p>
                 </div>
 
                 <nav className="menu">
@@ -310,9 +202,9 @@ export default function ClientsPage() {
                 </div>
             </aside>
 
-            {/* Main Content */}
+            {/* Main Content Area */}
             <div className="main-content">
-                {/* Header */}
+                {/* Top Header */}
                 <header className="header">
                     <div className="search-box">
                         <Search className="search-icon" size={18} />
@@ -320,7 +212,7 @@ export default function ClientsPage() {
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search clients, projects, emails..."
+                            placeholder="Search clients from database..."
                         />
                     </div>
 
@@ -345,8 +237,8 @@ export default function ClientsPage() {
                 <div className="dashboard">
                     <div className="title-actions">
                         <div className="title">
-                            <h1>Client Directory</h1>
-                            <p>Manage your global client relationships and active contracts.</p>
+                            <h1>Client Directory (MongoDB)</h1>
+                            <p>Live client accounts retrieved directly from your backend MongoDB database.</p>
                         </div>
 
                         <div style={{ display: "flex", gap: "12px" }}>
@@ -368,74 +260,84 @@ export default function ClientsPage() {
                         {/* LEFT: Client Table */}
                         <div className="dashboard-table-container" style={{ marginTop: 0 }}>
                             <div className="dashboard-table-header">
-                                <h3>All Clients ({filteredClients.length})</h3>
+                                <h3>All Database Clients ({filteredClients.length})</h3>
                             </div>
 
-                            <table className="dashboard-table">
-                                <thead>
-                                    <tr>
-                                        <th>Client Name</th>
-                                        <th>Project</th>
-                                        <th>Rating</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredClients.map((client, idx) => {
-                                        const isSelected = selectedClient?.id === client.id;
-                                        return (
-                                            <tr
-                                                key={client.id}
-                                                onClick={() => setSelectedClientIndex(idx)}
-                                                className={isSelected ? "active-row" : ""}
-                                                style={{ cursor: "pointer" }}
-                                            >
-                                                <td>
-                                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                                        <div className="icon-box employee-icon" style={{ width: "40px", height: "40px", fontSize: "18px" }}>
-                                                            {client.iconType === "corporate" && <Building size={18} color="#002045" />}
-                                                            {client.iconType === "cloud" && <Cloud size={18} color="#002045" />}
-                                                            {client.iconType === "dna" && <Dna size={18} color="#002045" />}
-                                                            {client.iconType === "home" && <Home size={18} color="#002045" />}
+                            {isLoading ? (
+                                <div style={{ padding: "40px", textAlign: "center", color: "#666" }}>
+                                    Loading clients from MongoDB database...
+                                </div>
+                            ) : filteredClients.length === 0 ? (
+                                <div style={{ padding: "40px", textAlign: "center", color: "#777" }}>
+                                    <Building size={36} color="#002045" style={{ marginBottom: "10px", opacity: 0.5 }} />
+                                    <p style={{ fontWeight: 600, color: "#002045" }}>No clients found in MongoDB database.</p>
+                                    <Link href="/clients/create" className="dashboard-btn-primary" style={{ display: "inline-flex", marginTop: "15px", textDecoration: "none" }}>
+                                        <Plus size={16} /> Add First Client
+                                    </Link>
+                                </div>
+                            ) : (
+                                <table className="dashboard-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Client Name</th>
+                                            <th>Status</th>
+                                            <th>Rating</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredClients.map((client, idx) => {
+                                            const isSelected = selectedClient?.id === client.id;
+                                            return (
+                                                <tr
+                                                    key={client.id}
+                                                    onClick={() => setSelectedClientIndex(idx)}
+                                                    className={isSelected ? "active-row" : ""}
+                                                    style={{ cursor: "pointer" }}
+                                                >
+                                                    <td>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                                            <div className="icon-box employee-icon" style={{ width: "40px", height: "40px", fontSize: "16px", fontWeight: "bold" }}>
+                                                                {client.initials}
+                                                            </div>
+                                                            <div>
+                                                                <strong style={{ color: "#002045", display: "block" }}>{client.name}</strong>
+                                                                <span style={{ fontSize: "12px", color: "#777" }}>{client.email}</span>
+                                                            </div>
                                                         </div>
-                                                        <div>
-                                                            <strong style={{ color: "#002045", display: "block" }}>{client.name}</strong>
-                                                            <span style={{ fontSize: "12px", color: "#777" }}>{client.email}</span>
+                                                    </td>
+                                                    <td>
+                                                        <span className={`badge ${client.status === "Active" ? "green" : "yellow"}`} style={{ background: client.status === "Inactive" ? "#ffeaea" : undefined, color: client.status === "Inactive" ? "#d63031" : undefined }}>
+                                                            {client.status}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <div style={{ display: "flex", color: "#f4c430" }}>
+                                                            {[...Array(5)].map((_, i) => (
+                                                                <Star key={i} size={14} fill="#f4c430" stroke="#f4c430" />
+                                                            ))}
                                                         </div>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <strong style={{ color: "#333", display: "block" }}>{client.project}</strong>
-                                                    <span className={`badge ${client.status === "Active" ? "green" : "yellow"}`}>
-                                                        {client.status}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <div style={{ display: "flex", color: "#f4c430" }}>
-                                                        {[...Array(5)].map((_, i) => (
-                                                            <Star key={i} size={14} fill={i < Math.floor(client.rating) ? "#f4c430" : "none"} stroke="#f4c430" />
-                                                        ))}
-                                                    </div>
-                                                </td>
-                                                <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "10px" }}>
-                                                        <button
-                                                            onClick={(e) => handleDeleteClient(e, client.id, client.name)}
-                                                            title="Delete Client"
-                                                            style={{ background: "none", border: "none", color: "#d63031", cursor: "pointer", padding: "4px" }}
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                        <Link href={`/clients/${client.id}`} onClick={(e) => e.stopPropagation()}>
-                                                            <ChevronRight size={18} color="#002045" style={{ cursor: "pointer" }} />
-                                                        </Link>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
+                                                    </td>
+                                                    <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "10px" }}>
+                                                            <button
+                                                                onClick={(e) => handleDeleteClient(e, client.id, client.name)}
+                                                                title="Delete Client"
+                                                                style={{ background: "none", border: "none", color: "#d63031", cursor: "pointer", padding: "4px" }}
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                            <Link href={`/clients/${client.id}`} onClick={(e) => e.stopPropagation()}>
+                                                                <ChevronRight size={18} color="#002045" style={{ cursor: "pointer" }} />
+                                                            </Link>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            )}
                         </div>
 
                         {/* RIGHT: Client Details Card */}
@@ -445,7 +347,9 @@ export default function ClientsPage() {
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
                                         <div>
                                             <h3>{selectedClient.name}</h3>
-                                            <span className="badge green">{selectedClient.badge}</span>
+                                            <span className={`badge ${selectedClient.status === "Active" ? "green" : "yellow"}`} style={{ background: selectedClient.status === "Inactive" ? "#ffeaea" : undefined, color: selectedClient.status === "Inactive" ? "#d63031" : undefined }}>
+                                                {selectedClient.badge}
+                                            </span>
                                             <small style={{ marginLeft: "10px" }}>Since {selectedClient.since}</small>
                                         </div>
                                         <div style={{ display: "flex", gap: "8px" }}>
@@ -469,132 +373,85 @@ export default function ClientsPage() {
                                             </div>
                                         </div>
                                         <div>
-                                            <span style={{ fontSize: "11px", color: "#777", textTransform: "uppercase" }}>Website</span>
+                                            <span style={{ fontSize: "11px", color: "#777", textTransform: "uppercase" }}>Contact Person</span>
                                             <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: "bold", color: "#002045", marginTop: "4px" }}>
-                                                <Globe size={14} /> {selectedClient.website}
+                                                <Users size={14} /> {selectedClient.contactName}
                                             </div>
                                         </div>
-                                    </div>
-
-                                    <div style={{ marginBottom: "25px" }}>
-                                        <h4 style={{ color: "#002045", fontSize: "15px", marginBottom: "10px" }}>Current Project</h4>
-                                        <div style={{ border: "1px solid #eee", borderRadius: "12px", padding: "15px" }}>
-                                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                                                <strong style={{ color: "#002045" }}>{selectedClient.project}</strong>
-                                                <span style={{ fontWeight: "bold", color: "#169c52" }}>{selectedClient.progress}%</span>
-                                            </div>
-                                            <div className="progress">
-                                                <div className="progress-fill employee-progress" style={{ width: `${selectedClient.progress}%` }}></div>
-                                            </div>
-                                            <div style={{ marginTop: "10px", fontSize: "12px", color: "#777", display: "flex", alignItems: "center", gap: "6px" }}>
-                                                <Calendar size={14} /> Deadline: <strong style={{ color: "#002045" }}>{selectedClient.deadline}</strong>
+                                        <div style={{ gridColumn: "span 2" }}>
+                                            <span style={{ fontSize: "11px", color: "#777", textTransform: "uppercase" }}>Website</span>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: "bold", color: "#002045", marginTop: "4px" }}>
+                                                <Globe size={14} /> <a href="#" style={{ color: "#002045" }}>{selectedClient.website}</a>
                                             </div>
                                         </div>
                                     </div>
 
                                     <div style={{ marginBottom: "20px" }}>
-                                        <h4 style={{ color: "#002045", fontSize: "15px", marginBottom: "10px" }}>Log Meeting Feedback</h4>
-                                        <div style={{ display: "flex", gap: "10px" }}>
-                                            <input
-                                                type="text"
-                                                value={feedbackText}
-                                                onChange={(e) => setFeedbackText(e.target.value)}
-                                                placeholder="Enter meeting notes..."
-                                                style={{ flex: 1, padding: "10px 15px", borderRadius: "8px", border: "1px solid #ddd", fontSize: "13px" }}
-                                            />
-                                            <button className="dashboard-btn-primary" onClick={handleSendFeedback} style={{ padding: "10px 16px" }}>
-                                                {feedbackSubmitted ? <Check size={16} /> : <Send size={16} />}
-                                            </button>
-                                        </div>
+                                        <h4 style={{ fontSize: "14px", color: "#002045", marginBottom: "8px" }}>Client Notes / Feedback</h4>
+                                        <p style={{ fontSize: "13px", fontStyle: "italic", color: "#555", background: "#fff", padding: "12px", borderRadius: "8px", border: "1px solid #eee", margin: 0 }}>
+                                            "{selectedClient.quote}"
+                                        </p>
                                     </div>
                                 </div>
 
-                                {/* Recent Touchpoints Agenda Card */}
-                                <div className="agenda-card">
-                                    <div className="agenda-title">
-                                        <div className="agenda-icon">
-                                            <CalendarDays size={22} />
+                                {/* Executive Notes & Feedback Form */}
+                                <div className="overview-card" style={{ marginTop: "20px" }}>
+                                    <div className="section-header">
+                                        <h3>Add Note for {selectedClient.name}</h3>
+                                    </div>
+
+                                    <form onSubmit={handleSendFeedback} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                                        <textarea
+                                            rows={3}
+                                            value={feedbackText}
+                                            onChange={(e) => setFeedbackText(e.target.value)}
+                                            placeholder={`Write an executive note or record meeting feedback for ${selectedClient.name}...`}
+                                            style={{
+                                                width: "100%",
+                                                padding: "12px",
+                                                borderRadius: "8px",
+                                                border: "1px solid #cbd5e1",
+                                                fontSize: "13px",
+                                                outline: "none"
+                                            }}
+                                        ></textarea>
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                            {feedbackSubmitted && (
+                                                <span style={{ fontSize: "12px", color: "#169c52", fontWeight: "bold", display: "flex", alignItems: "center", gap: "4px" }}>
+                                                    <Check size={14} /> Note Saved to Touchpoints!
+                                                </span>
+                                            )}
+                                            <button
+                                                type="submit"
+                                                className="dashboard-btn-primary"
+                                                style={{ marginLeft: "auto", padding: "8px 16px", fontSize: "13px" }}
+                                            >
+                                                <Send size={14} /> Save Note
+                                            </button>
                                         </div>
-                                        <div>
-                                            <h3>Recent Touchpoints</h3>
-                                            <p style={{ margin: 0, fontSize: "13px", color: "#d9e2f2" }}>Activity log with client</p>
+                                    </form>
+
+                                    {/* Touchpoints Log */}
+                                    <div style={{ marginTop: "20px", paddingTop: "15px", borderTop: "1px solid #eee" }}>
+                                        <h4 style={{ fontSize: "13px", color: "#777", marginBottom: "12px", textTransform: "uppercase" }}>Engagement History</h4>
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                                            {selectedClient.touchpoints?.map((tp, idx) => (
+                                                <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: "10px", fontSize: "13px" }}>
+                                                    <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#002045", marginTop: "6px" }}></div>
+                                                    <div>
+                                                        <strong style={{ color: "#002045", display: "block" }}>{tp.title}</strong>
+                                                        <span style={{ fontSize: "11px", color: "#888" }}>{tp.time}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
-                                    <ul>
-                                        {selectedClient.touchpoints.map((tp, i) => (
-                                            <li key={i}>
-                                                <span className={i === 0 ? "yellow-dot" : "green-dot"}></span>
-                                                <div>
-                                                    <strong style={{ fontSize: "13px", display: "block" }}>{tp.title}</strong>
-                                                    <span style={{ fontSize: "11px", color: "#a5b4fc" }}>{tp.time}</span>
-                                                </div>
-                                            </li>
-                                        ))}
-                                    </ul>
                                 </div>
                             </div>
                         )}
                     </div>
                 </div>
             </div>
-
-            {/* Modal: New Client */}
-            {showNewClientModal && (
-                <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", zIndex: 1000, display: "flex", alignItems: "center", justifyCenter: "center", padding: "20px" }}>
-                    <div style={{ background: "#fff", borderRadius: "18px", width: "100%", maxWidth: "500px", padding: "30px", boxShadow: "0 10px 30px rgba(0,0,0,0.2)" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-                            <h3 style={{ color: "#002045", fontSize: "20px" }}>Add New Enterprise Client</h3>
-                            <X size={20} style={{ cursor: "pointer", color: "#888" }} onClick={() => setShowNewClientModal(false)} />
-                        </div>
-                        <form onSubmit={handleCreateClient} className="form-grid" style={{ gridTemplateColumns: "1fr" }}>
-                            <div className="form-group">
-                                <label>Company Name *</label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={newClientForm.name}
-                                    onChange={(e) => setNewClientForm({ ...newClientForm, name: e.target.value })}
-                                    placeholder="e.g. Acme Corp"
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Contact Email</label>
-                                <input
-                                    type="email"
-                                    value={newClientForm.email}
-                                    onChange={(e) => setNewClientForm({ ...newClientForm, email: e.target.value })}
-                                    placeholder="contact@acme.com"
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Primary Project</label>
-                                <input
-                                    type="text"
-                                    value={newClientForm.project}
-                                    onChange={(e) => setNewClientForm({ ...newClientForm, project: e.target.value })}
-                                    placeholder="e.g. ERP Platform Upgrade"
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Account Classification</label>
-                                <select
-                                    value={newClientForm.badge}
-                                    onChange={(e) => setNewClientForm({ ...newClientForm, badge: e.target.value })}
-                                >
-                                    <option value="Key Account">Key Account</option>
-                                    <option value="Growth Partner">Growth Partner</option>
-                                    <option value="Enterprise">Enterprise</option>
-                                    <option value="Standard">Standard</option>
-                                </select>
-                            </div>
-                            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "15px" }}>
-                                <button type="button" className="dashboard-btn-secondary" onClick={() => setShowNewClientModal(false)}>Cancel</button>
-                                <button type="submit" className="dashboard-btn-primary">Save Client</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

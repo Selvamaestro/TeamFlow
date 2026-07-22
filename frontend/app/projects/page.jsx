@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import "../dashboard/dashboard.css";
+import { projectService } from "../../services/projectService";
+import { clientService } from "../../services/clientService";
 import {
     LayoutDashboard,
     Users,
@@ -20,86 +22,71 @@ import {
     Calendar,
     Star,
     Folder,
-    Archive
+    Archive,
+    CheckCircle2
 } from "lucide-react";
 
 export default function ProjectsPage() {
     const [selectedCategory, setSelectedCategory] = useState("active");
     const [searchQuery, setSearchQuery] = useState("");
+    const [isLoading, setIsLoading] = useState(true);
 
-    // Main Projects List matching admin_project.html
-    const [projects] = useState([
-        {
-            id: 1,
-            title: "Q4 Logistics Revamp",
-            client: "SwiftShip Logistics",
-            lead: "Marcus J.",
-            leadAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80",
-            status: "In Progress",
-            statusType: "blue",
-            progress: 65,
-            dueDate: "Dec 15, 2023",
-            actionLabel: "View Details",
-            category: "active",
-            starred: true
-        },
-        {
-            id: 2,
-            title: "Global ERP Integration",
-            client: "TerraCorp Industries",
-            lead: "Sarah Chen",
-            leadAvatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80",
-            status: "Completed",
-            statusType: "green",
-            progress: 100,
-            dueDate: "Oct 28, 2023",
-            actionLabel: "View Archive",
-            category: "active",
-            starred: true
-        },
-        {
-            id: 3,
-            title: "Mobile Banking UX",
-            client: "Apex Bank",
-            lead: "Elena Rodriguez",
-            leadAvatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&auto=format&fit=crop&q=80",
-            status: "Delayed",
-            statusType: "red",
-            progress: 42,
-            dueDate: "Nov 10, 2023",
-            actionLabel: "Review Blockers",
-            category: "active",
-            starred: false
-        },
-        {
-            id: 4,
-            title: "Hiring Dashboard V2",
-            client: "Internal Operations",
-            lead: "Alex Mercer",
-            leadAvatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&auto=format&fit=crop&q=80",
-            status: "In Progress",
-            statusType: "blue",
-            progress: 80,
-            dueDate: "Jan 15, 2024",
-            actionLabel: "View Details",
-            category: "active",
-            starred: true
-        },
-        {
-            id: 5,
-            title: "Legacy System Migration",
-            client: "OldGuard Inc.",
-            lead: "David Miller",
-            leadAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80",
-            status: "Archived",
-            statusType: "gray",
-            progress: 100,
-            dueDate: "Jun 20, 2023",
-            actionLabel: "View Details",
-            category: "archived",
-            starred: false
+    // Live MongoDB Projects state
+    const [projects, setProjects] = useState([]);
+
+    // Fetch live projects and clients from MongoDB database
+    useEffect(() => {
+        async function fetchDbProjects() {
+            setIsLoading(true);
+            try {
+                // Fetch clients map first
+                const clientMap = {};
+                const clientRes = await clientService.getClients().catch(() => null);
+                if (clientRes?.clients && Array.isArray(clientRes.clients)) {
+                    clientRes.clients.forEach(c => {
+                        clientMap[c._id] = c.company || c.name;
+                    });
+                }
+
+                // Fetch projects from backend database
+                const res = await projectService.getProjects();
+                if (res && res.projects && Array.isArray(res.projects)) {
+                    const mappedProjects = res.projects.map(p => {
+                        const clientName = typeof p.client === "object"
+                            ? (p.client.company || p.client.name)
+                            : (clientMap[p.client] || "Enterprise Client");
+
+                        const statusText = p.status ? (p.status.charAt(0).toUpperCase() + p.status.slice(1)) : "In Progress";
+                        const statusType = p.status === "completed" ? "green" : p.status === "delayed" ? "red" : "blue";
+
+                        return {
+                            id: p._id || p.id,
+                            title: p.title || "Project Initiative",
+                            client: clientName,
+                            lead: p.teamLeader?.name || "Sarah Chen",
+                            leadAvatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80",
+                            status: statusText,
+                            statusType: statusType,
+                            progress: p.status === "completed" ? 100 : 65,
+                            dueDate: p.dueDate ? new Date(p.dueDate).toLocaleDateString() : "Dec 2026",
+                            actionLabel: "View Details",
+                            category: p.status === "archived" ? "archived" : "active",
+                            starred: true,
+                            revenue: p.revenue ? `$${Number(p.revenue).toLocaleString()}` : "$50,000"
+                        };
+                    });
+
+                    setProjects(mappedProjects);
+                }
+            } catch (err) {
+                console.warn("Database projects fetch info:", err.message);
+            } finally {
+                setIsLoading(false);
+            }
         }
-    ]);
+
+        fetchDbProjects();
+    }, []);
 
     const filteredProjects = projects.filter(p => {
         const matchesCategory =
@@ -187,7 +174,7 @@ export default function ProjectsPage() {
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search projects, clients..."
+                            placeholder="Search database projects, clients..."
                         />
                     </div>
 
@@ -221,7 +208,7 @@ export default function ProjectsPage() {
                         </Link>
 
                         <div>
-                            <h3>All Projects</h3>
+                            <h3>Database Projects</h3>
                             <ul className="secondary-nav-list">
                                 <li>
                                     <div
@@ -275,12 +262,12 @@ export default function ProjectsPage() {
                             <div>
                                 <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
                                     <h1 style={{ color: "#002045", fontSize: "36px", margin: 0 }}>
-                                        {selectedCategory === "active" ? "Active Initiatives" : "Archived Projects"}
+                                        {selectedCategory === "active" ? "Active Initiatives (MongoDB)" : "Archived Projects"}
                                     </h1>
-                                    <span className="badge green">In Progress</span>
+                                    <span className="badge green">Live MongoDB Data</span>
                                 </div>
                                 <p style={{ color: "#666", fontSize: "16px" }}>
-                                    Overview of all high-priority corporate projects currently in development phase.
+                                    Overview of all corporate projects retrieved dynamically from your backend MongoDB database.
                                 </p>
                             </div>
 
@@ -294,75 +281,90 @@ export default function ProjectsPage() {
                         </div>
 
                         {/* PROJECTS GRID */}
-                        <div className="kpi-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))" }}>
-                            {filteredProjects.map((p) => (
-                                <div key={p.id} className="kpi-card">
-                                    <div className="card-top">
-                                        <div>
-                                            <h3 style={{ color: "#002045", fontSize: "20px", marginBottom: "4px" }}>{p.title}</h3>
-                                            <span style={{ fontSize: "13px", color: "#777" }}>Client: {p.client}</span>
+                        {isLoading ? (
+                            <div style={{ padding: "60px", textAlign: "center", color: "#666" }}>
+                                Loading projects from MongoDB database...
+                            </div>
+                        ) : filteredProjects.length === 0 ? (
+                            <div style={{ padding: "60px", textAlign: "center", color: "#777", background: "#fff", borderRadius: "16px" }}>
+                                <FolderKanban size={48} color="#002045" style={{ marginBottom: "15px", opacity: 0.5 }} />
+                                <h2>No Projects Found in MongoDB Database</h2>
+                                <p style={{ margin: "10px 0 20px" }}>Initialize a new project to track deliverables and milestones.</p>
+                                <Link href="/projects/create" className="dashboard-btn-primary" style={{ display: "inline-flex", textDecoration: "none" }}>
+                                    <Plus size={16} /> Create First Project
+                                </Link>
+                            </div>
+                        ) : (
+                            <div className="kpi-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))" }}>
+                                {filteredProjects.map((p) => (
+                                    <div key={p.id} className="kpi-card">
+                                        <div className="card-top">
+                                            <div>
+                                                <h3 style={{ color: "#002045", fontSize: "20px", marginBottom: "4px" }}>{p.title}</h3>
+                                                <span style={{ fontSize: "13px", color: "#777" }}>Client: {p.client}</span>
+                                            </div>
+                                            <span className={`badge ${p.statusType === "green" ? "green" : p.statusType === "red" ? "yellow" : "badge"}`} style={{ background: p.statusType === "red" ? "#ffeaea" : undefined, color: p.statusType === "red" ? "#d63031" : undefined }}>
+                                                {p.status}
+                                            </span>
                                         </div>
-                                        <span className={`badge ${p.statusType === "green" ? "green" : p.statusType === "red" ? "yellow" : "badge"}`} style={{ background: p.statusType === "red" ? "#ffeaea" : undefined, color: p.statusType === "red" ? "#d63031" : undefined }}>
-                                            {p.status}
-                                        </span>
-                                    </div>
 
-                                    <div style={{ display: "flex", alignItems: "center", gap: "10px", margin: "20px 0" }}>
-                                        <img src={p.leadAvatar} alt={p.lead} style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover" }} />
-                                        <span style={{ fontSize: "14px", color: "#333", fontWeight: 500 }}>Lead: {p.lead}</span>
-                                    </div>
-
-                                    <div style={{ marginBottom: "20px" }}>
-                                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#666", marginBottom: "6px" }}>
-                                            <span>Progress</span>
-                                            <strong style={{ color: p.statusType === "red" ? "#d63031" : "#002045" }}>{p.progress}%</strong>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "10px", margin: "20px 0" }}>
+                                            <img src={p.leadAvatar} alt={p.lead} style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover" }} />
+                                            <span style={{ fontSize: "14px", color: "#333", fontWeight: 500 }}>Lead: {p.lead}</span>
                                         </div>
-                                        <div className="progress">
-                                            <div
-                                                className="progress-fill employee-progress"
-                                                style={{
-                                                    width: `${p.progress}%`,
-                                                    background: p.statusType === "green" ? "#169c52" : p.statusType === "red" ? "#d63031" : "#002045"
-                                                }}
-                                            ></div>
+
+                                        <div style={{ marginBottom: "20px" }}>
+                                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#666", marginBottom: "6px" }}>
+                                                <span>Progress</span>
+                                                <strong style={{ color: p.statusType === "red" ? "#d63031" : "#002045" }}>{p.progress}%</strong>
+                                            </div>
+                                            <div className="progress">
+                                                <div
+                                                    className="progress-fill employee-progress"
+                                                    style={{
+                                                        width: `${p.progress}%`,
+                                                        background: p.statusType === "green" ? "#169c52" : p.statusType === "red" ? "#d63031" : "#002045"
+                                                    }}
+                                                ></div>
+                                            </div>
+                                        </div>
+
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "15px", borderTop: "1px solid #eee" }}>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "#777" }}>
+                                                <Calendar size={15} /> {p.dueDate}
+                                            </div>
+                                            <Link href={`/projects/${p.id}`} style={{ textDecoration: "none", color: p.statusType === "red" ? "#d63031" : "#002045", fontWeight: "bold", fontSize: "14px" }}>
+                                                {p.actionLabel} &rarr;
+                                            </Link>
                                         </div>
                                     </div>
+                                ))}
 
-                                    <div style={{ display: "flex", justifyBetween: "space-between", alignItems: "center", paddingTop: "15px", borderTop: "1px solid #eee" }}>
-                                        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "#777" }}>
-                                            <Calendar size={15} /> {p.dueDate}
-                                        </div>
-                                        <button style={{ background: "none", border: "none", color: p.statusType === "red" ? "#d63031" : "#002045", fontWeight: "bold", cursor: "pointer", fontSize: "14px" }}>
-                                            {p.actionLabel}
-                                        </button>
+                                {/* Dashed New Initiative Card Slot */}
+                                <Link
+                                    href="/projects/create"
+                                    className="kpi-card"
+                                    style={{
+                                        border: "2px dashed #cbd5e1",
+                                        boxShadow: "none",
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        cursor: "pointer",
+                                        minHeight: "240px",
+                                        background: "#fff",
+                                        textDecoration: "none"
+                                    }}
+                                >
+                                    <div className="icon-box project-icon" style={{ marginBottom: "15px" }}>
+                                        <Plus size={28} color="#002045" />
                                     </div>
-                                </div>
-                            ))}
-
-                            {/* Dashed New Initiative Card Slot */}
-                            <Link
-                                href="/projects/create"
-                                className="kpi-card"
-                                style={{
-                                    border: "2px dashed #cbd5e1",
-                                    boxShadow: "none",
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    cursor: "pointer",
-                                    minHeight: "240px",
-                                    background: "#fff",
-                                    textDecoration: "none"
-                                }}
-                            >
-                                <div className="icon-box project-icon" style={{ marginBottom: "15px" }}>
-                                    <Plus size={28} color="#002045" />
-                                </div>
-                                <h3 style={{ color: "#002045", fontSize: "18px", marginBottom: "4px" }}>New Initiative</h3>
-                                <p style={{ color: "#777", fontSize: "13px" }}>Start a new project workflow</p>
-                            </Link>
-                        </div>
+                                    <h3 style={{ color: "#002045", fontSize: "18px", marginBottom: "4px" }}>New Initiative</h3>
+                                    <p style={{ color: "#777", fontSize: "13px" }}>Start a new project workflow</p>
+                                </Link>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

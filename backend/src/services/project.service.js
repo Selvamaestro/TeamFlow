@@ -32,13 +32,15 @@ async function listProjects(viewer, { status, client } = {}) {
 
 // side effect: auto-creates the project's project_group Conversation, pre-populated
 // with every ceo/manager ("admin") plus the creator
-async function createProject(creator, { title, description, client, dueDate, revenue }) {
+async function createProject(creator, { title, description, client, dueDate, revenue, teamLeader, members }) {
   const project = await Project.create({
     title,
     description,
     client,
     dueDate,
     revenue,
+    teamLeader: teamLeader || null,
+    members: Array.isArray(members) ? members : [],
     manager: creator.id,
   });
 

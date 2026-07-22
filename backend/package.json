@@ -8,6 +8,7 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "seed": "node seed.js",
+    "db": "node inspect-db.js",
     "docker:build": "docker build -t teamflow-backend .",
     "docker:up": "docker compose up --build"
   },

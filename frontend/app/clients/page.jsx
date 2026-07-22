@@ -363,7 +363,9 @@ export default function ClientsPage() {
                                                     </div>
                                                 </td>
                                                 <td style={{ textAlign: "right" }}>
-                                                    <ChevronRight size={18} color="#002045" />
+                                                    <Link href={`/clients/${client.id}`} onClick={(e) => e.stopPropagation()}>
+                                                        <ChevronRight size={18} color="#002045" style={{ cursor: "pointer" }} />
+                                                    </Link>
                                                 </td>
                                             </tr>
                                         );
@@ -382,6 +384,9 @@ export default function ClientsPage() {
                                             <span className="badge green">{selectedClient.badge}</span>
                                             <small style={{ marginLeft: "10px" }}>Since {selectedClient.since}</small>
                                         </div>
+                                        <Link href={`/clients/${selectedClient.id}`} className="dashboard-btn-secondary" style={{ padding: "8px 14px", fontSize: "12px", textDecoration: "none" }}>
+                                            Full Details &rarr;
+                                        </Link>
                                     </div>
 
                                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", background: "#f8fbff", padding: "15px", borderRadius: "12px", marginBottom: "20px" }}>

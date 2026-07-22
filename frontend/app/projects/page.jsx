@@ -115,7 +115,7 @@ export default function ProjectsPage() {
     const filteredProjects = projects.filter(p => {
         const matchesCategory =
             selectedCategory === "active" ? p.category === "active" :
-            selectedCategory === "archived" ? p.category === "archived" : true;
+                selectedCategory === "archived" ? p.category === "archived" : true;
         const matchesSearch =
             p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             p.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -174,7 +174,7 @@ export default function ProjectsPage() {
                         </Link>
 
                         <div>
-                            <h3>Database Projects</h3>
+                            <h3>Projects</h3>
                             <ul className="secondary-nav-list">
                                 <li>
                                     <div
@@ -228,12 +228,12 @@ export default function ProjectsPage() {
                             <div>
                                 <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
                                     <h1 style={{ color: "#002045", fontSize: "36px", margin: 0 }}>
-                                        {selectedCategory === "active" ? "Active Initiatives (MongoDB)" : "Archived Projects"}
+                                        {selectedCategory === "active" ? "Active Initiatives" : "Archived Projects"}
                                     </h1>
                                     <span className="badge green">Live MongoDB Data</span>
                                 </div>
                                 <p style={{ color: "#666", fontSize: "16px" }}>
-                                    Overview of all corporate projects retrieved dynamically from your backend MongoDB database.
+                                    Overview of all corporate projects.
                                 </p>
                             </div>
 

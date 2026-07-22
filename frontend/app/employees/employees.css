@@ -1,0 +1,583 @@
+.employees-page{
+
+    padding:40px;
+
+    background:#f7fafc;
+
+    min-height:100vh;
+}
+
+/* HEADER */
+
+.employees-header{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:flex-end;
+
+    margin-bottom:30px;
+}
+
+.employees-header h1{
+
+    font-size:34px;
+
+    color:#002045;
+
+    font-weight:700;
+}
+
+.employees-header p{
+
+    color:#64748b;
+
+    margin-top:8px;
+}
+
+/* ADD BUTTON */
+
+.add-btn{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:10px;
+
+    background:#002045;
+
+    color:white;
+
+    text-decoration:none;
+
+    padding:14px 24px;
+
+    border-radius:12px;
+
+    font-weight:600;
+
+    transition:.3s;
+}
+
+.add-btn:hover{
+
+    transform:translateY(-2px);
+
+    background:#0b376e;
+}
+
+/* SEARCH */
+
+.search-section{
+
+    margin-bottom:30px;
+}
+
+.search-box{
+
+    max-width:420px;
+
+    display:flex;
+
+    align-items:center;
+
+    gap:12px;
+
+    background:white;
+
+    border:1px solid #dbe2ea;
+
+    padding:14px 18px;
+
+    border-radius:12px;
+}
+
+.search-box input{
+
+    flex:1;
+
+    border:none;
+
+    outline:none;
+
+    font-size:15px;
+}
+
+/* DEPARTMENT GRID */
+
+.department-grid{
+
+    display:grid;
+
+    grid-template-columns:repeat(4,1fr);
+
+    gap:24px;
+
+    margin-bottom:40px;
+}
+
+.department-card{
+
+    background:white;
+
+    border-radius:16px;
+
+    padding:24px;
+
+    border:1px solid #e2e8f0;
+
+    transition:.3s;
+
+    cursor:pointer;
+}
+
+.department-card:hover{
+
+    transform:translateY(-5px);
+
+    box-shadow:0 12px 25px rgba(0,0,0,.08);
+}
+
+.card-top{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    margin-bottom:25px;
+}
+
+.icon-box{
+
+    width:55px;
+
+    height:55px;
+
+    border-radius:14px;
+
+    background:#e7eef9;
+
+    color:#002045;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+}
+
+.card-top span{
+
+    background:#eef2f7;
+
+    color:#64748b;
+
+    padding:5px 12px;
+
+    border-radius:20px;
+
+    font-size:12px;
+
+    font-weight:600;
+}
+
+.department-card h3{
+
+    color:#002045;
+
+    font-size:22px;
+
+    margin-bottom:16px;
+}
+
+.member-count{
+
+    display:flex;
+
+    align-items:flex-end;
+
+    gap:10px;
+}
+
+.member-count h2{
+
+    color:#002045;
+
+    font-size:42px;
+
+    line-height:1;
+
+    font-weight:700;
+}
+
+.member-count p{
+
+    color:#64748b;
+
+    margin-bottom:6px;
+}
+
+@media(max-width:1100px){
+
+.department-grid{
+
+grid-template-columns:repeat(2,1fr);
+
+}
+
+}
+
+@media(max-width:700px){
+
+.department-grid{
+
+grid-template-columns:1fr;
+
+}
+
+.employees-header{
+
+flex-direction:column;
+
+align-items:flex-start;
+
+gap:20px;
+
+}
+
+.search-box{
+
+max-width:100%;
+
+}
+
+}
+/* ===========================
+      EMPLOYEE TABLE
+=========================== */
+
+.employee-table{
+
+    margin-top:35px;
+
+    background:#fff;
+
+    border:1px solid #e5e7eb;
+
+    border-radius:18px;
+
+    overflow:hidden;
+
+    box-shadow:0 8px 20px rgba(15,23,42,.05);
+
+}
+
+.table-header{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    padding:24px;
+
+    border-bottom:1px solid #e5e7eb;
+}
+
+.table-header h2{
+
+    color:#002045;
+
+    font-size:24px;
+}
+
+.table-header select{
+
+    padding:10px 16px;
+
+    border-radius:10px;
+
+    border:1px solid #dbe2ea;
+
+    outline:none;
+}
+
+table{
+
+    width:100%;
+
+    border-collapse:collapse;
+}
+
+thead{
+
+    background:#f8fafc;
+}
+
+th{
+
+    text-align:left;
+
+    padding:18px;
+
+    color:#64748b;
+
+    font-size:14px;
+
+    font-weight:600;
+}
+
+td{
+
+    padding:20px 18px;
+
+    border-top:1px solid #eef2f7;
+}
+
+.employee-info{
+
+    display:flex;
+
+    gap:15px;
+
+    align-items:center;
+}
+
+.avatar{
+
+    width:45px;
+
+    height:45px;
+
+    border-radius:50%;
+
+    background:#002045;
+
+    color:white;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    font-weight:bold;
+}
+
+.employee-info h4{
+
+    color:#002045;
+
+    margin-bottom:4px;
+}
+
+.employee-info p{
+
+    color:#64748b;
+
+    font-size:13px;
+}
+
+.dept-badge{
+
+    background:#edf3ff;
+
+    color:#002045;
+
+    padding:6px 14px;
+
+    border-radius:20px;
+
+    font-size:13px;
+
+    font-weight:600;
+}
+
+.progress-wrapper{
+
+    width:150px;
+}
+
+.progress-wrapper span{
+
+    font-size:13px;
+
+    color:#64748b;
+}
+
+.progress{
+
+    height:6px;
+
+    background:#e5e7eb;
+
+    border-radius:20px;
+
+    margin-top:6px;
+}
+
+.progress-fill{
+
+    height:100%;
+
+    background:#002045;
+
+    border-radius:20px;
+}
+
+.view-btn{
+
+    text-decoration:none;
+
+    border:1px solid #002045;
+
+    color:#002045;
+
+    padding:10px 16px;
+
+    border-radius:10px;
+
+    font-weight:600;
+
+    transition:.3s;
+}
+
+.view-btn:hover{
+
+    background:#002045;
+
+    color:white;
+}
+
+tbody tr:hover{
+
+    background:#fafcff;
+}
+/* ===========================
+TABLE RESPONSIVE
+=========================== */
+
+.table-responsive{
+
+    overflow-x:auto;
+}
+
+.employee-table table{
+
+    min-width:1100px;
+}
+
+/* ===========================
+PAGINATION
+=========================== */
+
+.pagination{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    padding:20px 24px;
+
+    border-top:1px solid #eef2f7;
+
+    background:#fff;
+
+}
+
+.pagination p{
+
+    color:#64748b;
+
+    font-size:14px;
+}
+
+.pages{
+
+    display:flex;
+
+    gap:10px;
+}
+
+.pages button{
+
+    background:white;
+
+    border:1px solid #dbe2ea;
+
+    padding:10px 18px;
+
+    border-radius:10px;
+
+    cursor:pointer;
+
+    transition:.3s;
+}
+
+.pages button:hover{
+
+    background:#002045;
+
+    color:white;
+}
+
+.pages .active{
+
+    background:#002045;
+
+    color:white;
+
+    border-color:#002045;
+}
+
+/* ===========================
+TABLE HOVER
+=========================== */
+
+tbody tr{
+
+    transition:.3s;
+}
+
+tbody tr:hover{
+
+    background:#f8fbff;
+}
+.filter-btn{
+
+    border:none;
+
+    background:none;
+
+    color:#475569;
+
+    font-weight:600;
+
+    cursor:pointer;
+
+}
+
+/* ===========================
+SMALL SCREEN
+=========================== */
+
+@media(max-width:768px){
+
+    .pagination{
+
+        flex-direction:column;
+
+        gap:18px;
+
+        align-items:flex-start;
+
+    }
+
+}

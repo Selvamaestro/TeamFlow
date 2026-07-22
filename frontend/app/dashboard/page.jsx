@@ -1,3 +1,4 @@
+import Link from "next/link";
 import "./dashboard.css";
 import {
     LayoutDashboard,
@@ -28,10 +29,10 @@ export default function Dashboard() {
                 </div>
 
                 <nav className="menu">
-                    <a href="#" className="active">
+                    <Link href="/dashboard" className="active">
                         <LayoutDashboard size={20} />
                         Dashboard
-                    </a>
+                    </Link>
 
                     <a href="#">
                         <Users size={20} />
@@ -43,25 +44,25 @@ export default function Dashboard() {
                         Revenue
                     </a>
 
-                    <a href="#">
+                    <Link href="/projects">
                         <FolderKanban size={20} />
                         Projects
-                    </a>
+                    </Link>
 
-                    <a href="#">
+                    <Link href="/attendance">
                         <CalendarDays size={20} />
                         Attendance
-                    </a>
+                    </Link>
 
                     <a href="#">
                         <MessageSquare size={20} />
                         Chat
                     </a>
 
-                    <a href="#">
+                    <Link href="/clients">
                         <Building2 size={20} />
                         Clients
-                    </a>
+                    </Link>
                 </nav>
 
                 <div className="sidebar-bottom">

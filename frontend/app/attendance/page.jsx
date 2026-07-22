@@ -167,10 +167,10 @@ export default function AttendancePage() {
                 </nav>
 
                 <div className="sidebar-bottom">
-                    <button className="project-btn">
+                    <Link href="/projects/create" className="project-btn" style={{ textDecoration: "none" }}>
                         <Plus size={18} />
                         New Project
-                    </button>
+                    </Link>
 
                     <a href="#">
                         <Settings size={18} />

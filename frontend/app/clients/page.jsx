@@ -240,10 +240,10 @@ export default function ClientsPage() {
                 </nav>
 
                 <div className="sidebar-bottom">
-                    <button className="project-btn" onClick={() => setShowNewClientModal(true)}>
+                    <Link href="/projects/create" className="project-btn" style={{ textDecoration: "none" }}>
                         <Plus size={18} />
-                        New Client
-                    </button>
+                        New Project
+                    </Link>
 
                     <a href="#">
                         <Settings size={18} />

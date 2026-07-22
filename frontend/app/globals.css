@@ -30,3 +30,11 @@ body {
   color: var(--foreground);
   font-family: var(--font-hanken), Arial, Helvetica, sans-serif;
 }
+
+select {
+  box-sizing: border-box !important;
+  min-height: 46px !important;
+  line-height: 1.4 !important;
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+}

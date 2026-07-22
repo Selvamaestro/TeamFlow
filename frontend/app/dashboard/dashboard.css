@@ -1028,7 +1028,6 @@ Agenda
 }
 
 .form-group input,
-.form-group select,
 .form-group textarea {
     width: 100%;
     padding: 14px 18px;
@@ -1038,6 +1037,23 @@ Agenda
     font-size: 15px;
     background: #fff;
     transition: 0.3s;
+    box-sizing: border-box;
+}
+
+.form-group select {
+    width: 100%;
+    min-height: 46px;
+    height: auto;
+    padding: 11px 14px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    outline: none;
+    font-size: 14px;
+    line-height: 1.4;
+    background: #fff;
+    transition: 0.3s;
+    box-sizing: border-box;
+    cursor: pointer;
 }
 
 .form-group input:focus,

@@ -1,9 +1,11 @@
 "use client";
 
 import "./employees.css";
+import "../dashboard/dashboard.css";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import api from "@/lib/api";
+import Sidebar from "@/components/Sidebar";
 
 import {
     Search,
@@ -81,14 +83,19 @@ export default function EmployeesPage() {
     }, [employees, search, departmentFilter]);
     if (loading) {
         return (
-            <div className="employees-page">
-                <h2>Loading employees...</h2>
+            <div className="dashboard-container">
+                <Sidebar active="employees" />
+                <div className="employees-page">
+                    <h2>Loading employees...</h2>
+                </div>
             </div>
         );
     }
     console.log("Employees:", employees);
     return (
-        <div className="employees-page">
+        <div className="dashboard-container">
+            <Sidebar active="employees" />
+            <div className="employees-page">
 
             {/* ================= Header ================= */}
 
@@ -388,6 +395,7 @@ export default function EmployeesPage() {
             </div>
 
 
+        </div>
         </div>
     );
 }

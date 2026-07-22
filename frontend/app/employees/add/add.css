@@ -1,11 +1,10 @@
-.add-page{
-
-    padding:28px;
-
-    background:#f6f8fb;
-
-    min-height:100vh;
-
+.add-page {
+    padding: 28px;
+    background: #f6f8fb;
+    min-height: 100vh;
+    margin-left: 280px;
+    width: calc(100% - 280px);
+    flex: 1;
 }
 
 /* Header */
@@ -256,24 +255,18 @@ FORM GRID
 SELECT
 ====================== */
 
-.form-group select{
-
-    height:44px;
-
-    border:1px solid #dbe2ea;
-
-    border-radius:10px;
-
-    padding:0 14px;
-
-    font-size:14px;
-
-    background:#fff;
-
-    outline:none;
-
-    cursor:pointer;
-
+.form-group select {
+    min-height: 46px;
+    height: auto;
+    border: 1px solid #dbe2ea;
+    border-radius: 10px;
+    padding: 11px 14px;
+    font-size: 14px;
+    line-height: 1.4;
+    background: #fff;
+    outline: none;
+    cursor: pointer;
+    box-sizing: border-box;
 }
 
 .form-group select:focus{

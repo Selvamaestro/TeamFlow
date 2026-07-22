@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import "../dashboard/dashboard.css";
+import Sidebar from "@/components/Sidebar";
 import { projectService } from "../../services/projectService";
 import { clientService } from "../../services/clientService";
 import {
@@ -114,7 +115,7 @@ export default function ProjectsPage() {
     const filteredProjects = projects.filter(p => {
         const matchesCategory =
             selectedCategory === "active" ? p.category === "active" :
-            selectedCategory === "archived" ? p.category === "archived" : true;
+                selectedCategory === "archived" ? p.category === "archived" : true;
         const matchesSearch =
             p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             p.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -127,65 +128,7 @@ export default function ProjectsPage() {
     return (
         <div className="dashboard-container">
             {/* Sidebar */}
-            <aside className="sidebar">
-                <div className="logo">
-                    <h2>AdminSuite</h2>
-                    <p>Enterprise Management</p>
-                </div>
-
-                <nav className="menu">
-                    <Link href="/dashboard">
-                        <LayoutDashboard size={20} />
-                        Dashboard
-                    </Link>
-
-                    <a href="#">
-                        <Users size={20} />
-                        Employees
-                    </a>
-
-                    <a href="#">
-                        <DollarSign size={20} />
-                        Revenue
-                    </a>
-
-                    <Link href="/projects" className="active">
-                        <FolderKanban size={20} />
-                        Projects
-                    </Link>
-
-                    <Link href="/attendance">
-                        <CalendarDays size={20} />
-                        Attendance
-                    </Link>
-
-                    <a href="#">
-                        <MessageSquare size={20} />
-                        Chat
-                    </a>
-
-                    <Link href="/clients">
-                        <Building2 size={20} />
-                        Clients
-                    </Link>
-                </nav>
-
-                <div className="sidebar-bottom">
-                    <Link href="/projects/create" className="project-btn" style={{ textDecoration: "none" }}>
-                        <Plus size={18} />
-                        New Project
-                    </Link>
-
-                    <a href="#">
-                        <Settings size={18} />
-                        System Settings
-                    </a>
-                    <a href="#">
-                        <LogOut size={18} />
-                        Logout
-                    </a>
-                </div>
-            </aside>
+            <Sidebar active="projects" />
 
             {/* Main Content Area */}
             <div className="main-content">
@@ -231,7 +174,7 @@ export default function ProjectsPage() {
                         </Link>
 
                         <div>
-                            <h3>Database Projects</h3>
+                            <h3>Projects</h3>
                             <ul className="secondary-nav-list">
                                 <li>
                                     <div
@@ -285,12 +228,12 @@ export default function ProjectsPage() {
                             <div>
                                 <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
                                     <h1 style={{ color: "#002045", fontSize: "36px", margin: 0 }}>
-                                        {selectedCategory === "active" ? "Active Initiatives (MongoDB)" : "Archived Projects"}
+                                        {selectedCategory === "active" ? "Active Initiatives" : "Archived Projects"}
                                     </h1>
                                     <span className="badge green">Live MongoDB Data</span>
                                 </div>
                                 <p style={{ color: "#666", fontSize: "16px" }}>
-                                    Overview of all corporate projects retrieved dynamically from your backend MongoDB database.
+                                    Overview of all corporate projects.
                                 </p>
                             </div>
 

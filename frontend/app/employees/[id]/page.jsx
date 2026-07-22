@@ -2,10 +2,12 @@
 "use client";
 
 import "./details.css";
+import "../../dashboard/dashboard.css";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import api from "@/lib/api";
 import Link from "next/link";
+import Sidebar from "@/components/Sidebar";
 
 import {
     ArrowLeft,
@@ -54,15 +56,31 @@ useEffect(() => {
 
 }, [id]);
 if (loading) {
-    return <h2>Loading employee...</h2>;
+    return (
+        <div className="dashboard-container">
+            <Sidebar active="employees" />
+            <div className="employee-details-page">
+                <h2>Loading employee...</h2>
+            </div>
+        </div>
+    );
 }
 
 if (!employee) {
-    return <h2>Employee not found.</h2>;
+    return (
+        <div className="dashboard-container">
+            <Sidebar active="employees" />
+            <div className="employee-details-page">
+                <h2>Employee not found.</h2>
+            </div>
+        </div>
+    );
 }
 
     return (
-  <div className="employee-details-page">
+        <div className="dashboard-container">
+            <Sidebar active="employees" />
+            <div className="employee-details-page">
 
     {/* Breadcrumb */}
     <div className="page-top">
@@ -429,6 +447,7 @@ if (!employee) {
 
 </div>
 
+  </div>
   </div>
 );
 }

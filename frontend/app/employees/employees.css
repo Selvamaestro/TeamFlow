@@ -1,10 +1,10 @@
-.employees-page{
-
-    padding:40px;
-
-    background:#f7fafc;
-
-    min-height:100vh;
+.employees-page {
+    padding: 40px;
+    background: #f7fafc;
+    min-height: 100vh;
+    margin-left: 280px;
+    width: calc(100% - 280px);
+    flex: 1;
 }
 
 /* HEADER */

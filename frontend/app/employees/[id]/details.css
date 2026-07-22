@@ -1,11 +1,10 @@
-.employee-details-page{
-
-    padding:28px;
-
-    background:#f6f8fb;
-
-    min-height:100vh;
-
+.employee-details-page {
+    padding: 28px;
+    background: #f6f8fb;
+    min-height: 100vh;
+    margin-left: 280px;
+    width: calc(100% - 280px);
+    flex: 1;
 }
 
 .page-top{

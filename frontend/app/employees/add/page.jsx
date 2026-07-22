@@ -1,5 +1,7 @@
 import "./add.css";
+import "../../dashboard/dashboard.css";
 import Link from "next/link";
+import Sidebar from "@/components/Sidebar";
 import {
     ArrowLeft,
     User,
@@ -8,7 +10,9 @@ import {
 
 export default function AddEmployee() {
     return (
-        <div className="add-page">
+        <div className="dashboard-container">
+            <Sidebar active="employees" />
+            <div className="add-page">
 
             {/* Breadcrumb */}
 
@@ -317,6 +321,7 @@ export default function AddEmployee() {
 
             </div>
 
+        </div>
         </div>
     );
 }

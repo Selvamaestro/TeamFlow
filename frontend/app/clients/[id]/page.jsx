@@ -360,7 +360,7 @@ export default function ClientDetailPage({ params }) {
                             <div style={{ flex: 1 }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px", flexWrap: "wrap" }}>
                                     <h1 style={{ color: "#002045", fontSize: "32px", margin: 0 }}>{client.name}</h1>
-                                    <span className="badge green" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                    <span className={`badge ${client.status === "INACTIVE" ? "yellow" : "green"}`} style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: client.status === "INACTIVE" ? "#ffeaea" : undefined, color: client.status === "INACTIVE" ? "#d63031" : undefined }}>
                                         <ShieldCheck size={14} /> {client.badge}
                                     </span>
                                 </div>
@@ -399,9 +399,9 @@ export default function ClientDetailPage({ params }) {
                             </div>
 
                             {/* Engagement Status Badge */}
-                            <div style={{ padding: "12px 24px", background: "#eef4ff", border: "1px solid #dfe9ff", borderRadius: "12px", textAlign: "center" }}>
-                                <span style={{ fontSize: "11px", color: "#777", textTransform: "uppercase", display: "block" }}>Engagement Status</span>
-                                <strong style={{ fontSize: "18px", color: "#002045" }}>{client.status}</strong>
+                            <div style={{ padding: "12px 24px", background: client.status === "INACTIVE" ? "#ffeaea" : "#eef4ff", border: `1px solid ${client.status === "INACTIVE" ? "#ffcdd2" : "#dfe9ff"}`, borderRadius: "12px", textAlign: "center" }}>
+                                <span style={{ fontSize: "11px", color: client.status === "INACTIVE" ? "#d63031" : "#777", textTransform: "uppercase", display: "block" }}>Engagement Status</span>
+                                <strong style={{ fontSize: "18px", color: client.status === "INACTIVE" ? "#d63031" : "#002045" }}>{client.status}</strong>
                             </div>
                         </div>
                     </div>

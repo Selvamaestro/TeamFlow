@@ -23,8 +23,8 @@ async function getClientById(id) {
 }
 
 async function createClient(data, createdBy) {
-  const { name, email, company, phone } = data;
-  return Client.create({ name, email, company, phone, createdBy });
+  const { name, email, company, phone, status, logoUrl, notes } = data;
+  return Client.create({ name, email, company, phone, status, logoUrl, notes, createdBy });
 }
 
 const UPDATABLE_FIELDS = ["name", "email", "company", "phone", "status", "notes", "logoUrl"];

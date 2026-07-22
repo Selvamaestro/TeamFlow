@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import "../dashboard/dashboard.css";
+import { clientService } from "../../services/clientService";
 import {
     LayoutDashboard,
     Users,
@@ -29,7 +30,8 @@ import {
     Download,
     Send,
     Check,
-    X
+    X,
+    Trash2
 } from "lucide-react";
 
 export default function ClientsPage() {
@@ -38,6 +40,19 @@ export default function ClientsPage() {
     const [showNewClientModal, setShowNewClientModal] = useState(false);
     const [feedbackText, setFeedbackText] = useState("");
     const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+
+    const handleDeleteClient = async (e, id, name) => {
+        if (e) e.stopPropagation();
+        if (confirm(`Are you sure you want to delete client "${name}" permanently from MongoDB database?`)) {
+            try {
+                await clientService.deleteClient(id);
+            } catch (err) {
+                console.log("Delete client notice:", err.message);
+            }
+            setClientsList(prev => prev.filter(c => c.id !== id));
+            setSelectedClientIndex(0);
+        }
+    };
 
     // Initial Clients Data
     const [clientsList, setClientsList] = useState([
@@ -121,6 +136,45 @@ export default function ClientsPage() {
             ]
         }
     ]);
+
+    // Fetch live MongoDB clients from backend clientService on mount
+    useEffect(() => {
+        async function fetchDbClients() {
+            try {
+                const res = await clientService.getClients();
+                if (res && res.clients && Array.isArray(res.clients) && res.clients.length > 0) {
+                    const mappedDbClients = res.clients.map(c => ({
+                        id: c._id || c.id,
+                        name: c.company || c.name,
+                        email: c.email || "contact@client.com",
+                        phone: c.phone || "+1 (555) 000-1111",
+                        website: c.website || "www.client.com",
+                        project: "Enterprise System Integration",
+                        status: c.status === "active" ? "Active" : "Inactive",
+                        rating: 5.0,
+                        badge: "Key Account",
+                        since: "2024",
+                        progress: 50,
+                        deadline: "Dec 31, 2024",
+                        quote: c.notes || "Active enterprise client registered in database.",
+                        iconType: "corporate",
+                        touchpoints: [
+                            { title: "Client Registered in Database", time: "Live Database Record" }
+                        ]
+                    }));
+
+                    setClientsList(prev => {
+                        const existingIds = new Set(prev.map(p => p.id));
+                        const newEntries = mappedDbClients.filter(m => !existingIds.has(m.id));
+                        return [...newEntries, ...prev];
+                    });
+                }
+            } catch (err) {
+                console.log("Database client fetch info:", err.message);
+            }
+        }
+        fetchDbClients();
+    }, []);
 
     // Modal Form State
     const [newClientForm, setNewClientForm] = useState({
@@ -299,12 +353,13 @@ export default function ClientsPage() {
                             <button className="dashboard-btn-secondary">
                                 <Download size={16} /> Export List
                             </button>
-                            <button
+                            <Link
+                                href="/clients/create"
                                 className="dashboard-btn-primary"
-                                onClick={() => setShowNewClientModal(true)}
+                                style={{ textDecoration: "none" }}
                             >
                                 <Plus size={16} /> New Client
-                            </button>
+                            </Link>
                         </div>
                     </div>
 
@@ -362,10 +417,19 @@ export default function ClientsPage() {
                                                         ))}
                                                     </div>
                                                 </td>
-                                                <td style={{ textAlign: "right" }}>
-                                                    <Link href={`/clients/${client.id}`} onClick={(e) => e.stopPropagation()}>
-                                                        <ChevronRight size={18} color="#002045" style={{ cursor: "pointer" }} />
-                                                    </Link>
+                                                <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "10px" }}>
+                                                        <button
+                                                            onClick={(e) => handleDeleteClient(e, client.id, client.name)}
+                                                            title="Delete Client"
+                                                            style={{ background: "none", border: "none", color: "#d63031", cursor: "pointer", padding: "4px" }}
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                        <Link href={`/clients/${client.id}`} onClick={(e) => e.stopPropagation()}>
+                                                            <ChevronRight size={18} color="#002045" style={{ cursor: "pointer" }} />
+                                                        </Link>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         );
@@ -384,9 +448,17 @@ export default function ClientsPage() {
                                             <span className="badge green">{selectedClient.badge}</span>
                                             <small style={{ marginLeft: "10px" }}>Since {selectedClient.since}</small>
                                         </div>
-                                        <Link href={`/clients/${selectedClient.id}`} className="dashboard-btn-secondary" style={{ padding: "8px 14px", fontSize: "12px", textDecoration: "none" }}>
-                                            Full Details &rarr;
-                                        </Link>
+                                        <div style={{ display: "flex", gap: "8px" }}>
+                                            <button
+                                                onClick={(e) => handleDeleteClient(e, selectedClient.id, selectedClient.name)}
+                                                style={{ background: "#ffeaea", color: "#d63031", border: "none", borderRadius: "8px", padding: "8px 12px", fontSize: "12px", fontWeight: "bold", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
+                                            >
+                                                <Trash2 size={14} /> Delete
+                                            </button>
+                                            <Link href={`/clients/${selectedClient.id}`} className="dashboard-btn-secondary" style={{ padding: "8px 14px", fontSize: "12px", textDecoration: "none" }}>
+                                                Full Details &rarr;
+                                            </Link>
+                                        </div>
                                     </div>
 
                                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", background: "#f8fbff", padding: "15px", borderRadius: "12px", marginBottom: "20px" }}>

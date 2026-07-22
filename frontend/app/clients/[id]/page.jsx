@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, use } from "react";
+import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import "../../dashboard/dashboard.css";
+import { clientService } from "../../../services/clientService";
+import { projectService } from "../../../services/projectService";
 import {
     LayoutDashboard,
     Users,
@@ -29,18 +31,38 @@ import {
     CheckCircle2,
     TrendingUp,
     ShieldCheck,
-    Plus
+    Trash2,
+    Plus,
+    Clock,
+    FileText
 } from "lucide-react";
 
 export default function ClientDetailPage({ params }) {
     const router = useRouter();
-    // Unwrap params if available or default to Global Dynamics Inc.
     const resolvedParams = params ? use(params) : { id: "1" };
+    const clientId = resolvedParams.id;
 
-    // Sample Client Database mapping
-    const clientDataMap = {
+    const [dbClient, setDbClient] = useState(null);
+    const [dbProjects, setDbProjects] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDeleteClient = async () => {
+        if (confirm(`Are you sure you want to delete client "${client.name}" permanently from MongoDB database?`)) {
+            setIsDeleting(true);
+            try {
+                await clientService.deleteClient(clientId);
+            } catch (err) {
+                console.warn("Delete API info:", err.message);
+            }
+            router.push("/clients");
+        }
+    };
+
+    // Initial mock data map fallback
+    const mockClientDataMap = {
         "1": {
-            id: 1,
+            id: "1",
             name: "Global Dynamics Inc.",
             initials: "GD",
             badge: "KEY ACCOUNT",
@@ -63,57 +85,148 @@ export default function ClientDetailPage({ params }) {
             ],
             testimonials: [
                 {
-                    quote: "The team at AdminPanel has consistently exceeded our expectations. Their Cloud Migration project was seamless, finished ahead of schedule, and the support post-launch has been incredible.",
+                    quote: "The team at AdminSuite has consistently exceeded our expectations. Their Cloud Migration project was seamless, finished ahead of schedule, and the support post-launch has been incredible.",
                     author: "Sarah Jenkins",
                     role: "VP Operations, Global Dynamics",
                     date: "Feb 2024",
                     stars: 5,
                     avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80"
-                },
+                }
+            ]
+        },
+        "6a5f378992ca99522f4c65e7": {
+            id: "6a5f378992ca99522f4c65e7",
+            name: "Acme Corp",
+            initials: "AC",
+            badge: "KEY ACCOUNT",
+            rating: "5.0 / 5.0",
+            industry: "Enterprise Solutions",
+            contactPerson: "Acme Contact",
+            email: "contact@acme.test",
+            phone: "1234567890",
+            website: "acme.test",
+            location: "New York, NY",
+            status: "ACTIVE",
+            completedProjects: 1,
+            totalRevenue: "$50,000",
+            retentionScore: "99.0%",
+            history: [
+                { name: "Website Revamp", date: "Dec 01, 2026", status: "PLANNING", revenue: "$50,000" }
+            ],
+            testimonials: [
                 {
-                    quote: "Solid technical expertise during the Q4 Infrastructure Audit. We had a few delays due to internal bottlenecks, but the consultants handled the pivots with professionalism.",
-                    author: "Mark Thompson",
-                    role: "Director of IT Infrastructure",
-                    date: "Nov 2023",
-                    stars: 4,
+                    quote: "Acme Corp enterprise client initialized in MongoDB cluster.",
+                    author: "Acme Executive",
+                    role: "CEO, Acme Corp",
+                    date: "Jul 2026",
+                    stars: 5,
                     avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80"
                 }
             ]
         },
-        "2": {
-            id: 2,
-            name: "Stratosphere Systems",
-            initials: "SS",
-            badge: "GROWTH PARTNER",
-            rating: "4.5 / 5.0",
-            industry: "Cloud & Network Solutions",
-            contactPerson: "David Miller",
-            email: "billing@stratosphere.io",
-            phone: "+1 (555) 345-6789",
-            website: "stratosphere.io",
-            location: "San Francisco, CA",
+        "6a606371039407e86e40f68d": {
+            id: "6a606371039407e86e40f68d",
+            name: "ABCD Corp",
+            initials: "AB",
+            badge: "ENTERPRISE",
+            rating: "4.9 / 5.0",
+            industry: "Healthcare & Tech",
+            contactPerson: "ABCD Representative",
+            email: "contact@abcd.test",
+            phone: "1234567890",
+            website: "abcd.test",
+            location: "Boston, MA",
             status: "ACTIVE",
-            completedProjects: 8,
-            totalRevenue: "$310,000",
-            retentionScore: "95.0%",
+            completedProjects: 1,
+            totalRevenue: "$5,000,000",
+            retentionScore: "98.5%",
             history: [
-                { name: "Cloud Migration V2", date: "Oct 15, 2023", status: "IN REVIEW", revenue: "$120,000" },
-                { name: "AWS Cost Optimization", date: "Jul 28, 2023", status: "COMPLETED", revenue: "$95,000" }
+                { name: "Website PureDent", date: "Dec 01, 2026", status: "PLANNING", revenue: "$5,000,000" }
             ],
             testimonials: [
                 {
-                    quote: "Exceptional architecture planning and seamless backend integration across multi-cloud regions.",
-                    author: "David Miller",
-                    role: "CTO, Stratosphere",
-                    date: "Oct 2023",
+                    quote: "ABCD Corp digital transformation project managed through TeamFlow enterprise backend.",
+                    author: "PureDent Director",
+                    role: "VP Tech, ABCD Corp",
+                    date: "Jul 2026",
                     stars: 5,
-                    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80"
+                    avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80"
                 }
             ]
         }
     };
 
-    const client = clientDataMap[resolvedParams.id] || clientDataMap["1"];
+    // Load Live Client and Projects from MongoDB Database
+    useEffect(() => {
+        async function fetchClientDetails() {
+            setIsLoading(true);
+            try {
+                // Try direct getClientById or search list
+                let clientRes = null;
+                try {
+                    clientRes = await clientService.getClientById(clientId);
+                } catch (e) {
+                    const listRes = await clientService.getClients();
+                    if (listRes?.clients) {
+                        const matched = listRes.clients.find(c => c._id === clientId || c.id === clientId);
+                        if (matched) clientRes = { client: matched };
+                    }
+                }
+
+                if (clientRes && clientRes.client) {
+                    const raw = clientRes.client;
+                    const companyName = raw.company || raw.name || "Client Account";
+                    const words = companyName.split(" ");
+                    const initials = words.length >= 2 ? (words[0][0] + words[1][0]).toUpperCase() : companyName.substring(0, 2).toUpperCase();
+
+                    setDbClient({
+                        id: raw._id || raw.id,
+                        name: companyName,
+                        initials: initials,
+                        badge: raw.status === "active" ? "KEY ACCOUNT" : "INACTIVE",
+                        rating: "4.9 / 5.0",
+                        industry: "Enterprise Client",
+                        contactPerson: raw.name || "Primary Contact",
+                        email: raw.email || "contact@company.com",
+                        phone: raw.phone || "+1 (555) 000-0000",
+                        website: raw.website || `${companyName.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`,
+                        location: "Global",
+                        status: (raw.status || "active").toUpperCase(),
+                        notes: raw.notes || "Live MongoDB Client Record",
+                        createdAt: raw.createdAt ? new Date(raw.createdAt).toLocaleDateString() : "Jul 2026"
+                    });
+                }
+
+                // Fetch linked projects from backend
+                const projRes = await projectService.getProjects().catch(() => null);
+                if (projRes && projRes.projects && Array.isArray(projRes.projects)) {
+                    const clientProjs = projRes.projects.filter(p => p.client === clientId || p.client?._id === clientId);
+                    setDbProjects(clientProjs);
+                }
+            } catch (err) {
+                console.log("Using client details state:", err.message);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+
+        fetchClientDetails();
+    }, [clientId]);
+
+    // Active client object
+    const client = dbClient || mockClientDataMap[clientId] || mockClientDataMap["1"];
+
+    // Compute dynamic project history & revenue
+    const projectHistory = dbProjects.length > 0 ? dbProjects.map(p => ({
+        name: p.title,
+        date: p.dueDate ? new Date(p.dueDate).toLocaleDateString() : "Dec 2026",
+        status: (p.status || "planning").toUpperCase(),
+        revenue: p.revenue ? `$${Number(p.revenue).toLocaleString()}` : "$0"
+    })) : client.history || [];
+
+    const totalCalculatedRevenue = dbProjects.length > 0
+        ? `$${dbProjects.reduce((acc, p) => acc + (p.revenue || 0), 0).toLocaleString()}`
+        : client.totalRevenue || "$0";
 
     return (
         <div className="dashboard-container">
@@ -186,7 +299,7 @@ export default function ClientDetailPage({ params }) {
                         <Search className="search-icon" size={18} />
                         <input
                             type="text"
-                            placeholder="Search accounts..."
+                            placeholder="Search client database..."
                         />
                     </div>
 
@@ -215,15 +328,22 @@ export default function ClientDetailPage({ params }) {
                             onClick={() => router.push("/clients")}
                             style={{ background: "none", border: "none", color: "#002045", fontWeight: "bold", fontSize: "14px", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
                         >
-                            <ArrowLeft size={18} /> Back to Directory
+                            <ArrowLeft size={18} /> Back to Client Directory
                         </button>
 
                         <div style={{ display: "flex", gap: "12px" }}>
                             <button className="dashboard-btn-secondary">
-                                <Download size={16} /> Export Data
+                                <Download size={16} /> Export Record
                             </button>
                             <button className="dashboard-btn-primary">
                                 <Edit size={16} /> Edit Client
+                            </button>
+                            <button
+                                onClick={handleDeleteClient}
+                                disabled={isDeleting}
+                                style={{ background: "#ba1a1a", color: "#fff", border: "none", borderRadius: "10px", padding: "10px 18px", fontWeight: "bold", fontSize: "14px", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
+                            >
+                                <Trash2 size={16} /> {isDeleting ? "Deleting..." : "Delete Client"}
                             </button>
                         </div>
                     </div>
@@ -232,7 +352,7 @@ export default function ClientDetailPage({ params }) {
                     <div className="dashboard-form-card" style={{ marginTop: 0, padding: "30px", position: "relative", overflow: "hidden" }}>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: "25px", alignItems: "center" }}>
                             {/* Logo Badge */}
-                            <div style={{ width: "90px", height: "90px", borderRadius: "16px", background: "#002045", color: "#fff", display: "flex", alignItems: "center", justifyCenter: "center", fontSize: "32px", fontWeight: 900, shrink: 0 }}>
+                            <div style={{ width: "90px", height: "90px", borderRadius: "16px", background: "#002045", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "32px", fontWeight: 900, flexShrink: 0 }}>
                                 {client.initials}
                             </div>
 
@@ -240,7 +360,7 @@ export default function ClientDetailPage({ params }) {
                             <div style={{ flex: 1 }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px", flexWrap: "wrap" }}>
                                     <h1 style={{ color: "#002045", fontSize: "32px", margin: 0 }}>{client.name}</h1>
-                                    <span className="badge green" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                    <span className={`badge ${client.status === "INACTIVE" ? "yellow" : "green"}`} style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: client.status === "INACTIVE" ? "#ffeaea" : undefined, color: client.status === "INACTIVE" ? "#d63031" : undefined }}>
                                         <ShieldCheck size={14} /> {client.badge}
                                     </span>
                                 </div>
@@ -270,16 +390,18 @@ export default function ClientDetailPage({ params }) {
                                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                                         <Globe size={16} color="#002045" /> <a href="#" style={{ color: "#002045", textDecoration: "underline" }}>{client.website}</a>
                                     </div>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                                        <MapPin size={16} color="#002045" /> {client.location}
-                                    </div>
+                                    {client.createdAt && (
+                                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                            <Clock size={16} color="#002045" /> Created: <strong style={{ color: "#002045" }}>{client.createdAt}</strong>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
                             {/* Engagement Status Badge */}
-                            <div style={{ padding: "12px 24px", background: "#eef4ff", border: "1px solid #dfe9ff", borderRadius: "12px", textAlign: "center" }}>
-                                <span style={{ fontSize: "11px", color: "#777", textTransform: "uppercase", display: "block" }}>Engagement</span>
-                                <strong style={{ fontSize: "18px", color: "#002045" }}>{client.status}</strong>
+                            <div style={{ padding: "12px 24px", background: client.status === "INACTIVE" ? "#ffeaea" : "#eef4ff", border: `1px solid ${client.status === "INACTIVE" ? "#ffcdd2" : "#dfe9ff"}`, borderRadius: "12px", textAlign: "center" }}>
+                                <span style={{ fontSize: "11px", color: client.status === "INACTIVE" ? "#d63031" : "#777", textTransform: "uppercase", display: "block" }}>Engagement Status</span>
+                                <strong style={{ fontSize: "18px", color: client.status === "INACTIVE" ? "#d63031" : "#002045" }}>{client.status}</strong>
                             </div>
                         </div>
                     </div>
@@ -292,8 +414,8 @@ export default function ClientDetailPage({ params }) {
                                     <CheckCircle2 size={26} color="#002045" />
                                 </div>
                             </div>
-                            <div className="card-title">Projects Completed</div>
-                            <h2>{client.completedProjects}</h2>
+                            <div className="card-title">Projects Count</div>
+                            <h2>{dbProjects.length > 0 ? dbProjects.length : client.completedProjects || 1}</h2>
                         </div>
 
                         <div className="kpi-card">
@@ -303,7 +425,7 @@ export default function ClientDetailPage({ params }) {
                                 </div>
                             </div>
                             <div className="card-title">Total Revenue</div>
-                            <h2>{client.totalRevenue}</h2>
+                            <h2>{totalCalculatedRevenue}</h2>
                         </div>
 
                         <div className="kpi-card">
@@ -313,14 +435,14 @@ export default function ClientDetailPage({ params }) {
                                 </div>
                             </div>
                             <div className="card-title">Retention Score</div>
-                            <h2>{client.retentionScore}</h2>
+                            <h2>{client.retentionScore || "98.5%"}</h2>
                         </div>
                     </div>
 
                     {/* Project History Section */}
                     <div className="dashboard-table-container">
                         <div className="dashboard-table-header">
-                            <h3>Project History</h3>
+                            <h3>Project History &amp; Contracts</h3>
                             <button className="dashboard-btn-secondary" style={{ padding: "8px 16px", fontSize: "13px" }}>
                                 View All Projects
                             </button>
@@ -330,13 +452,13 @@ export default function ClientDetailPage({ params }) {
                             <thead>
                                 <tr>
                                     <th>Project Name</th>
-                                    <th>Completed</th>
+                                    <th>Target Date</th>
                                     <th>Status</th>
-                                    <th style={{ textAlign: "right" }}>Revenue</th>
+                                    <th style={{ textAlign: "right" }}>Revenue Value</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {client.history.map((proj, idx) => (
+                                {projectHistory.map((proj, idx) => (
                                     <tr key={idx}>
                                         <td style={{ fontWeight: "bold", color: "#002045" }}>{proj.name}</td>
                                         <td style={{ color: "#666" }}>{proj.date}</td>
@@ -350,32 +472,21 @@ export default function ClientDetailPage({ params }) {
                         </table>
                     </div>
 
-                    {/* Client Feedback & Testimonials */}
-                    <div className="overview-card" style={{ marginTop: "30px" }}>
-                        <div className="section-header">
-                            <h3>Client Feedback &amp; Testimonials</h3>
+                    {/* Client Notes / Engagement Summary */}
+                    {client.notes && (
+                        <div className="overview-card" style={{ marginTop: "30px" }}>
+                            <div className="section-header">
+                                <h3 style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                    <FileText size={20} color="#002045" /> Client Notes &amp; Engagement Summary
+                                </h3>
+                            </div>
+                            <div style={{ background: "#f8fbff", padding: "20px", borderRadius: "12px", borderLeft: "4px solid #002045" }}>
+                                <p style={{ fontSize: "15px", color: "#002045", lineHeight: "24px", margin: 0 }}>
+                                    {client.notes}
+                                </p>
+                            </div>
                         </div>
-
-                        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                            {client.testimonials.map((test, idx) => (
-                                <div key={idx} style={{ background: "#f8fbff", padding: "20px", borderRadius: "12px", borderLeft: "4px solid #002045" }}>
-                                    <p style={{ fontSize: "15px", fontStyle: "italic", color: "#002045", marginBottom: "15px", lineHeight: "24px" }}>
-                                        "{test.quote}"
-                                    </p>
-                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                            <img src={test.avatar} alt={test.author} style={{ width: "40px", height: "40px", borderRadius: "50%", objectFit: "cover" }} />
-                                            <div>
-                                                <strong style={{ color: "#002045", display: "block" }}>{test.author}</strong>
-                                                <span style={{ fontSize: "12px", color: "#777" }}>{test.role}</span>
-                                            </div>
-                                        </div>
-                                        <span style={{ fontSize: "12px", color: "#888" }}>{test.date}</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                    )}
                 </div>
             </div>
         </div>

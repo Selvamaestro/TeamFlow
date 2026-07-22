@@ -27,7 +27,11 @@ async function listProjects(viewer, { status, client } = {}) {
     filter.$or = [{ members: viewer.id }, { teamLeader: viewer.id }];
   }
 
-  return Project.find(filter).sort({ createdAt: -1 });
+  return Project.find(filter)
+    .populate("teamLeader", "name email employeeId avatarUrl role designation department")
+    .populate("members", "name email employeeId avatarUrl role designation department")
+    .populate("client", "name company email")
+    .sort({ createdAt: -1 });
 }
 
 // side effect: auto-creates the project's project_group Conversation, pre-populated
@@ -123,10 +127,17 @@ async function addDocument(project, file, uploadedBy) {
   return project.documents[project.documents.length - 1];
 }
 
+async function deleteProject(project) {
+  const projectId = project._id || project.id || project;
+  await Project.findByIdAndDelete(projectId);
+  return { message: "Project deleted successfully" };
+}
+
 module.exports = {
   listProjects,
   createProject,
   updateProject,
+  deleteProject,
   addMembers,
   removeMember,
   setTeamLeader,

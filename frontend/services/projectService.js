@@ -30,6 +30,12 @@ export const projectService = {
             method: "PATCH",
             body: projectData,
         });
+    },
+
+    async deleteProject(id) {
+        return await apiFetch(`/projects/${id}`, {
+            method: "DELETE",
+        });
     }
 };
 

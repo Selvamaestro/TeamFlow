@@ -23,7 +23,9 @@ import {
     Star,
     Folder,
     Archive,
-    CheckCircle2
+    CheckCircle2,
+    Trash2,
+    Shield
 } from "lucide-react";
 
 export default function ProjectsPage() {
@@ -59,12 +61,20 @@ export default function ProjectsPage() {
                         const statusText = p.status ? (p.status.charAt(0).toUpperCase() + p.status.slice(1)) : "In Progress";
                         const statusType = p.status === "completed" ? "green" : p.status === "delayed" ? "red" : "blue";
 
+                        const leadName = typeof p.teamLeader === "object" && p.teamLeader
+                            ? (p.teamLeader.name || p.teamLeader.email)
+                            : "Unassigned Lead";
+
+                        const leadAvatar = typeof p.teamLeader === "object" && p.teamLeader?.avatarUrl
+                            ? p.teamLeader.avatarUrl
+                            : "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80";
+
                         return {
                             id: p._id || p.id,
                             title: p.title || "Project Initiative",
                             client: clientName,
-                            lead: p.teamLeader?.name || "Sarah Chen",
-                            leadAvatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80",
+                            lead: leadName,
+                            leadAvatar: leadAvatar,
                             status: statusText,
                             statusType: statusType,
                             progress: p.status === "completed" ? 100 : 65,
@@ -87,6 +97,19 @@ export default function ProjectsPage() {
 
         fetchDbProjects();
     }, []);
+
+    const handleDeleteProject = async (e, projectId, projectTitle) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (confirm(`Are you sure you want to delete project "${projectTitle}" permanently from MongoDB database?`)) {
+            try {
+                await projectService.deleteProject(projectId);
+                setProjects(prev => prev.filter(p => p.id !== projectId));
+            } catch (err) {
+                console.warn("Delete project notice:", err.message);
+            }
+        }
+    };
 
     const filteredProjects = projects.filter(p => {
         const matchesCategory =
@@ -271,13 +294,6 @@ export default function ProjectsPage() {
                                 </p>
                             </div>
 
-                            {/* Avatars */}
-                            <div className="avatars">
-                                <span style={{ backgroundImage: "url(https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80)", backgroundSize: "cover" }}></span>
-                                <span style={{ backgroundImage: "url(https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80)", backgroundSize: "cover" }}></span>
-                                <span style={{ backgroundImage: "url(https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80)", backgroundSize: "cover" }}></span>
-                                <div className="more">+8</div>
-                            </div>
                         </div>
 
                         {/* PROJECTS GRID */}
@@ -308,9 +324,9 @@ export default function ProjectsPage() {
                                             </span>
                                         </div>
 
-                                        <div style={{ display: "flex", alignItems: "center", gap: "10px", margin: "20px 0" }}>
-                                            <img src={p.leadAvatar} alt={p.lead} style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover" }} />
-                                            <span style={{ fontSize: "14px", color: "#333", fontWeight: 500 }}>Lead: {p.lead}</span>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "8px", margin: "20px 0", color: "#002045", fontSize: "14px", fontWeight: 500 }}>
+                                            <Shield size={16} color="#002045" />
+                                            <span>Lead: <strong>{p.lead}</strong></span>
                                         </div>
 
                                         <div style={{ marginBottom: "20px" }}>
@@ -333,9 +349,18 @@ export default function ProjectsPage() {
                                             <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "#777" }}>
                                                 <Calendar size={15} /> {p.dueDate}
                                             </div>
-                                            <Link href={`/projects/${p.id}`} style={{ textDecoration: "none", color: p.statusType === "red" ? "#d63031" : "#002045", fontWeight: "bold", fontSize: "14px" }}>
-                                                {p.actionLabel} &rarr;
-                                            </Link>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                                <button
+                                                    onClick={(e) => handleDeleteProject(e, p.id, p.title)}
+                                                    title="Delete Project"
+                                                    style={{ background: "none", border: "none", color: "#d63031", cursor: "pointer", padding: "4px", display: "flex", alignItems: "center" }}
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                                <Link href={`/projects/${p.id}`} style={{ textDecoration: "none", color: p.statusType === "red" ? "#d63031" : "#002045", fontWeight: "bold", fontSize: "14px" }}>
+                                                    {p.actionLabel} &rarr;
+                                                </Link>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}

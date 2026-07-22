@@ -10,6 +10,7 @@ router.use(authenticate);
 
 router.get("/", ctrl.listProjects);
 router.get("/:id", requireProjectAccess, ctrl.getProject);
+router.delete("/:id", requireRole(["manager", "ceo", "hr"]), requireProjectAccess, ctrl.deleteProject);
 router.post("/", requireRole(["manager", "ceo", "hr"]), ctrl.createProject);
 router.patch("/:id", requireProjectAccess, ctrl.updateProject);
 router.post("/:id/members", requireRole(["manager", "ceo", "hr"]), requireProjectAccess, ctrl.addMembers);

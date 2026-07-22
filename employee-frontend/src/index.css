@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: "Hanken Grotesk", sans-serif;
+  background-color: #f7fafc;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+.card-shadow {
+  box-shadow: 0px 4px 20px rgba(26, 54, 93, 0.05);
+  border: 1px solid #e2e8f0;
+}
+
+.tonal-layering-bg {
+  background: radial-gradient(circle at top left, #f1f4f6 0%, #f7fafc 100%);
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Visible keyboard focus everywhere, even on custom controls */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #2d476f;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

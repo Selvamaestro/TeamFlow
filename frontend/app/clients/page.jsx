@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import "../dashboard/dashboard.css";
+import { clientService } from "../../services/clientService";
 import {
     LayoutDashboard,
     Users,
@@ -121,6 +122,45 @@ export default function ClientsPage() {
             ]
         }
     ]);
+
+    // Fetch live MongoDB clients from backend clientService on mount
+    useEffect(() => {
+        async function fetchDbClients() {
+            try {
+                const res = await clientService.getClients();
+                if (res && res.clients && Array.isArray(res.clients) && res.clients.length > 0) {
+                    const mappedDbClients = res.clients.map(c => ({
+                        id: c._id || c.id,
+                        name: c.company || c.name,
+                        email: c.email || "contact@client.com",
+                        phone: c.phone || "+1 (555) 000-1111",
+                        website: c.website || "www.client.com",
+                        project: "Enterprise System Integration",
+                        status: c.status === "active" ? "Active" : "Inactive",
+                        rating: 5.0,
+                        badge: "Key Account",
+                        since: "2024",
+                        progress: 50,
+                        deadline: "Dec 31, 2024",
+                        quote: c.notes || "Active enterprise client registered in database.",
+                        iconType: "corporate",
+                        touchpoints: [
+                            { title: "Client Registered in Database", time: "Live Database Record" }
+                        ]
+                    }));
+
+                    setClientsList(prev => {
+                        const existingIds = new Set(prev.map(p => p.id));
+                        const newEntries = mappedDbClients.filter(m => !existingIds.has(m.id));
+                        return [...newEntries, ...prev];
+                    });
+                }
+            } catch (err) {
+                console.log("Database client fetch info:", err.message);
+            }
+        }
+        fetchDbClients();
+    }, []);
 
     // Modal Form State
     const [newClientForm, setNewClientForm] = useState({
@@ -299,12 +339,13 @@ export default function ClientsPage() {
                             <button className="dashboard-btn-secondary">
                                 <Download size={16} /> Export List
                             </button>
-                            <button
+                            <Link
+                                href="/clients/create"
                                 className="dashboard-btn-primary"
-                                onClick={() => setShowNewClientModal(true)}
+                                style={{ textDecoration: "none" }}
                             >
                                 <Plus size={16} /> New Client
-                            </button>
+                            </Link>
                         </div>
                     </div>
 

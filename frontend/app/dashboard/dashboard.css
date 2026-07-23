@@ -659,14 +659,17 @@ body {
 /* ===================== */
 
 .project-section {
-
-    margin-top: 40px;
-
-    border-top: 1px solid #eee;
-
-    padding-top: 35px;
+    margin-top: 30px;
+    padding-top: 25px;
+    border-top: 1px solid #ececec;
+}
+.project-progress-item {
+    margin-bottom: 22px;
 }
 
+.project-progress-item:last-child {
+    margin-bottom: 0;
+}
 .project-section h3 {
 
     margin-bottom: 25px;
@@ -680,33 +683,42 @@ body {
 }
 
 .project-header {
-
     display: flex;
-
     justify-content: space-between;
-
-    margin-bottom: 12px;
+    align-items: flex-start;
+    margin-bottom: 8px;
 }
 
 .project-header h4 {
-
-    font-size: 17px;
-
-    margin-bottom: 6px;
+    color: #002045;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 4px;
 }
 
 .project-header p {
-
     color: #777;
-
     font-size: 13px;
 }
 
 .project-header span {
-
     color: #002045;
-
-    font-weight: bold;
+    font-size: 15px;
+    font-weight: 700;
+}
+.project-progress-item small {
+    display: block;
+    color: #777;
+    font-size: 12px;
+    margin-bottom: 10px;
+}
+.project-section .progress {
+    margin-bottom: 0;
+}
+.left-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
 }
 
 /* ===========================
@@ -1287,4 +1299,4 @@ Agenda
     gap: 12px;
     background: #f8fafc;
 }
-
+

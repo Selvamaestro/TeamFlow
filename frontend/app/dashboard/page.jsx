@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import api from "@/lib/api";
 import Link from "next/link";
 import "./dashboard.css";
 import Sidebar from "@/components/Sidebar";
@@ -19,6 +23,70 @@ import {
 } from "lucide-react";
 
 export default function Dashboard() {
+    const [dashboard, setDashboard] = useState(null);
+    const [user, setUser] = useState(null);
+    const [leaveRequests, setLeaveRequests] = useState([]);
+    const [projects, setProjects] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+
+    useEffect(() => {
+
+        const fetchDashboard = async () => {
+
+            try {
+
+                const response = await api.get("/dashboard/overview");
+
+                setDashboard(response.data);
+                const leaveResponse = await api.get("/leave?status=pending");
+
+                setLeaveRequests(leaveResponse.data.requests);
+
+                const storedUser = localStorage.getItem("user");
+
+                if (storedUser) {
+                    setUser(JSON.parse(storedUser));
+                }
+
+            } catch (error) {
+
+                console.error(error);
+
+            } finally {
+
+                setLoading(false);
+
+            }
+
+        };
+
+        fetchDashboard();
+
+    }, []);
+    useEffect(() => {
+        async function fetchProjects() {
+            try {
+                const response = await api.get("/projects");
+                setProjects(response.data.projects);
+            } catch (error) {
+                console.error(error);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        fetchProjects();
+    }, []);
+    if (loading) {
+        return <h2>Loading Projects...</h2>;
+    }
+    if (loading) {
+
+        return <h2>Loading Dashboard...</h2>;
+
+    }
+
     return (
         <div className="dashboard-container">
             {/* ================= Sidebar ================= */}
@@ -56,13 +124,17 @@ export default function Dashboard() {
                         <div className="profile">
 
                             <div className="profile-text">
-                                <h4>Alexander Vance</h4>
-                                <span>Chief Executive Officer</span>
+                                <h4>{user?.name || "User"}</h4>
+
+                                <span>{user?.role?.toUpperCase()}</span>
                             </div>
 
                             <img
-                                src="https://i.pravatar.cc/100"
-                                alt="profile"
+                                src={
+                                    user?.avatarUrl ||
+                                    `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || "User")}`
+                                }
+                                alt={user?.name || "Profile"}
                             />
 
                         </div>
@@ -108,7 +180,7 @@ export default function Dashboard() {
                                 Today's Present Employees
                             </p>
 
-                            <h2>1,284</h2>
+                            <h2>{dashboard?.attendanceToday}</h2>
 
                             <div className="progress">
 
@@ -117,7 +189,9 @@ export default function Dashboard() {
                             </div>
 
                             <small>
-                                92% of total workforce currently logged in.
+
+                                Present: {dashboard?.attendanceToday} / {dashboard?.totalEmployees}
+
                             </small>
 
                         </div>
@@ -144,7 +218,11 @@ export default function Dashboard() {
                                 Month Revenue (MTD)
                             </p>
 
-                            <h2>$842,500</h2>
+                            <h2>
+
+                                ₹ {dashboard?.revenueThisMonth?.toLocaleString() || 0}
+
+                            </h2>
 
                             <small>
                                 Projected monthly target:
@@ -175,7 +253,7 @@ export default function Dashboard() {
                                 Active Client Projects
                             </p>
 
-                            <h2>42</h2>
+                            <h2>{dashboard?.activeProjects}</h2>
 
                             <div className="avatars">
 
@@ -199,151 +277,134 @@ export default function Dashboard() {
                     <div className="overview-grid">
 
                         {/* LEFT SIDE */}
+                        <div className="left-panel">
 
-                        <div className="overview-card">
+                            <div className="overview-card">
 
-                            {/* Pending Leave */}
+                                {/* Pending Leave */}
 
-                            <div className="section-header">
-                                <h3>Pending Leave Requests</h3>
-                                <button>View All</button>
-                            </div>
-
-                            {/* Employee 1 */}
-
-                            <div className="leave-card">
-
-                                <div className="leave-info">
-
-                                    <div className="avatar">
-                                        JD
-                                    </div>
-
-                                    <div>
-
-                                        <h4>Julianne Dorsey</h4>
-
-                                        <p>Vacation • Oct 24-27</p>
-
-                                    </div>
-
+                                <div className="section-header">
+                                    <h3>Pending Leave Requests</h3>
+                                    <button>View All</button>
                                 </div>
+                                {leaveRequests.length === 0 ? (
 
-                                <div className="leave-buttons">
+                                    <p>No pending leave requests.</p>
 
-                                    <button className="approve">
-                                        Approve
-                                    </button>
+                                ) : (
 
-                                    <button className="reject">
-                                        Reject
-                                    </button>
+                                    leaveRequests.slice(0, 2).map((leave) => (
 
-                                </div>
+                                        <div className="leave-card" key={leave._id}>
 
-                            </div>
+                                            <div className="leave-info">
 
-                            {/* Employee 2 */}
+                                                <div className="avatar">
 
-                            <div className="leave-card">
+                                                    {leave.user?.name?.charAt(0)}
 
-                                <div className="leave-info">
+                                                </div>
 
-                                    <div className="avatar purple">
-                                        MK
-                                    </div>
+                                                <div>
 
-                                    <div>
+                                                    <h4>{leave.user?.name}</h4>
 
-                                        <h4>Marcus Knight</h4>
+                                                    <p>
+                                                        {leave.type} • {new Date(leave.startDate).toLocaleDateString()}
+                                                    </p>
 
-                                        <p>Sick Leave • Oct 12</p>
+                                                </div>
 
-                                    </div>
+                                            </div>
 
-                                </div>
+                                            <div className="leave-buttons">
 
-                                <div className="leave-buttons">
+                                                <button className="approve">
+                                                    Approve
+                                                </button>
 
-                                    <button className="approve">
-                                        Approve
-                                    </button>
+                                                <button className="reject">
+                                                    Reject
+                                                </button>
 
-                                    <button className="reject">
-                                        Reject
-                                    </button>
-
-                                </div>
-
-                            </div>
-
-                            {/* Project Progress */}
-
-                            <div className="project-section">
-
-                                <h3>Project Progress</h3>
-
-                                {/* Project 1 */}
-
-                                <div className="project">
-
-                                    <div className="project-header">
-
-                                        <div>
-
-                                            <h4>Cloud Infrastructure Revamp</h4>
-
-                                            <p>Due : Dec 15, 2024</p>
+                                            </div>
 
                                         </div>
 
-                                        <span>75%</span>
+                                    ))
 
-                                    </div>
-
-                                    <div className="progress">
-
-                                        <div
-                                            className="progress-fill"
-                                            style={{ width: "75%" }}
-                                        ></div>
-
-                                    </div>
-
-                                </div>
-
-                                {/* Project 2 */}
-
-                                <div className="project">
-
-                                    <div className="project-header">
-
-                                        <div>
-
-                                            <h4>Mobile App Redesign</h4>
-
-                                            <p>Due : Nov 30, 2024</p>
-
-                                        </div>
-
-                                        <span>40%</span>
-
-                                    </div>
-
-                                    <div className="progress">
-
-                                        <div
-                                            className="progress-fill"
-                                            style={{ width: "40%" }}
-                                        ></div>
-
-                                    </div>
-
-                                </div>
-
+                                )}
                             </div>
+                            <div className="overview-card">
+
+
+
+                                <div className="section-header">
+                                    <h3>Project Progress</h3>
+                                    <button>View All</button>
+                                </div>
+
+                                {projects.length === 0 ? (
+                                    <p>No active projects.</p>
+                                ) : (
+                                    projects.slice(0, 2).map((project) => (
+                                        <div key={project._id} className="project-card">
+                                            <h4>{project.title}</h4>
+
+                                            <div className="project-progress-item">
+
+                                                <div className="project-header">
+
+                                                    <h4>{project.title}</h4>
+
+                                                    <span>
+                                                        {project.status === "completed"
+                                                            ? "100%"
+                                                            : project.status === "planning"
+                                                                ? "30%"
+                                                                : project.status === "in_progress"
+                                                                    ? "70%"
+                                                                    : "50%"}
+                                                    </span>
+
+                                                </div>
+
+                                                <small>
+                                                    Due{" "}
+                                                    {project.dueDate
+                                                        ? new Date(project.dueDate).toLocaleDateString()
+                                                        : "N/A"}
+                                                </small>
+
+                                                <div className="progress">
+
+                                                    <div
+                                                        className="progress-fill employee-progress"
+                                                        style={{
+                                                            width:
+                                                                project.status === "completed"
+                                                                    ? "100%"
+                                                                    : project.status === "planning"
+                                                                        ? "30%"
+                                                                        : project.status === "in_progress"
+                                                                            ? "70%"
+                                                                            : "50%"
+                                                        }}
+                                                    />
+
+                                                </div>
+
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+
+
 
                         </div>
+
                         {/* RIGHT SIDE */}
 
                         <div className="right-panel">

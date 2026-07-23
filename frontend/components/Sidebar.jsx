@@ -33,10 +33,10 @@ export default function Sidebar({ active = "employees" }) {
                     Employees
                 </Link>
 
-                <a href="#" className={active === "revenue" ? "active" : ""}>
+                <Link href="/revenue" className={active === "revenue" ? "active" : ""}>
                     <DollarSign size={20} />
                     Revenue
-                </a>
+                </Link>
 
                 <Link href="/projects" className={active === "projects" ? "active" : ""}>
                     <FolderKanban size={20} />

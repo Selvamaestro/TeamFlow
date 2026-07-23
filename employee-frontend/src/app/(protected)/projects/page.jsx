@@ -1,11 +1,13 @@
-import { useEffect, useState } from "react";
-import EmployeeLayout from "../layouts/EmployeeLayout";
-import ProjectProgressCard from "../components/ProjectProgressCard";
-import * as projectApi from "../api/project.api";
-import * as taskApi from "../api/task.api";
-import { formatDate } from "../utils/formatDate";
+"use client";
 
-export default function Projects() {
+import { useEffect, useState } from "react";
+import EmployeeLayout from "../../../components/EmployeeLayout";
+import ProjectProgressCard from "../../../components/ProjectProgressCard";
+import * as projectApi from "../../../api/project.api";
+import * as taskApi from "../../../api/task.api";
+import { formatDate } from "../../../utils/formatDate";
+
+export default function ProjectsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [projects, setProjects] = useState([]);

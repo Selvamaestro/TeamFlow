@@ -1,14 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
-import EmployeeLayout from "../layouts/EmployeeLayout";
-import TaskListItem from "../components/TaskListItem";
-import { useAuth } from "../context/AuthContext";
-import * as projectApi from "../api/project.api";
-import * as taskApi from "../api/task.api";
-import * as rewardApi from "../api/reward.api";
-import * as attendanceApi from "../api/attendance.api";
-import { formatTime, formatDueLabel, daysUntil } from "../utils/formatDate";
+"use client";
 
-export default function Dashboard() {
+import { useEffect, useMemo, useState } from "react";
+import EmployeeLayout from "../../../components/EmployeeLayout";
+import TaskListItem from "../../../components/TaskListItem";
+import { useAuth } from "../../../context/AuthContext";
+import * as projectApi from "../../../api/project.api";
+import * as taskApi from "../../../api/task.api";
+import * as rewardApi from "../../../api/reward.api";
+import * as attendanceApi from "../../../api/attendance.api";
+import { formatTime, formatDueLabel, daysUntil } from "../../../utils/formatDate";
+
+export default function DashboardPage() {
   const { user } = useAuth();
 
   const [isLoading, setIsLoading] = useState(true);

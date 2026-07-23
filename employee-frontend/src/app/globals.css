@@ -24,7 +24,6 @@ body {
   display: none;
 }
 
-/* Visible keyboard focus everywhere, even on custom controls */
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,

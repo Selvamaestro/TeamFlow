@@ -5,7 +5,9 @@ import axios from "axios";
 // so requests must be sent with credentials. We additionally attach the
 // token as a Bearer header (stored in memory by AuthContext) so the same
 // client works if cookie auth is ever turned off.
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+//
+// Next.js only exposes env vars prefixed NEXT_PUBLIC_ to the browser.
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api";
 
 const axiosClient = axios.create({
   baseURL: API_BASE_URL,
@@ -15,7 +17,6 @@ const axiosClient = axios.create({
   },
 });
 
-// Token is set by AuthContext after login / on session restore.
 let inMemoryToken = null;
 export function setAuthToken(token) {
   inMemoryToken = token;

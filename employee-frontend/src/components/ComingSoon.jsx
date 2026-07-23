@@ -1,4 +1,4 @@
-import EmployeeLayout from "../layouts/EmployeeLayout";
+import EmployeeLayout from "./EmployeeLayout";
 
 export default function ComingSoon({ title, icon }) {
   return (

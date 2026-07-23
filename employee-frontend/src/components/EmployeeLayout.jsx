@@ -1,5 +1,7 @@
-import Sidebar from "../components/Sidebar";
-import Topbar from "../components/Topbar";
+"use client";
+
+import Sidebar from "./Sidebar";
+import Topbar from "./Topbar";
 
 export default function EmployeeLayout({ children, title }) {
   return (

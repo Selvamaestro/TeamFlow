@@ -1,11 +1,21 @@
-import { useState } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+"use client";
 
-export default function Login() {
-  const { user, signIn } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "../../context/AuthContext";
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
+  const { user, isLoading, signIn } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -13,11 +23,14 @@ export default function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
+  const redirectTo = searchParams.get("from") || "/dashboard";
+
   // Already logged in (e.g. cookie session restored) -> skip the login form.
-  if (user) {
-    const from = location.state?.from?.pathname || "/dashboard";
-    return <Navigate to={from} replace />;
-  }
+  useEffect(() => {
+    if (!isLoading && user) {
+      router.replace(redirectTo);
+    }
+  }, [isLoading, user, router, redirectTo]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -25,8 +38,7 @@ export default function Login() {
     setIsSubmitting(true);
     try {
       await signIn(email, password);
-      const from = location.state?.from?.pathname || "/dashboard";
-      navigate(from, { replace: true });
+      router.replace(redirectTo);
     } catch (err) {
       setError(err.message || "Invalid email or password");
     } finally {

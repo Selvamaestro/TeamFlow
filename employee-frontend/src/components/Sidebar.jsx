@@ -1,4 +1,7 @@
-import { NavLink, useNavigate } from "react-router-dom";
+"use client";
+
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 
 const NAV_ITEMS = [
@@ -10,32 +13,31 @@ const NAV_ITEMS = [
   { to: "/rewards", icon: "military_tech", label: "Reward" },
 ];
 
-function NavItem({ to, icon, label }) {
+function NavItem({ to, icon, label, isActive }) {
   return (
-    <NavLink
-      to={to}
-      className={({ isActive }) =>
-        [
-          "px-4 py-3 flex items-center gap-3 transition-all active:scale-95 rounded-r-lg",
-          isActive
-            ? "bg-secondary-container text-on-secondary-container border-l-4 border-primary"
-            : "text-on-surface-variant hover:bg-surface-container-high border-l-4 border-transparent",
-        ].join(" ")
-      }
+    <Link
+      href={to}
+      className={[
+        "px-4 py-3 flex items-center gap-3 transition-all active:scale-95 rounded-r-lg",
+        isActive
+          ? "bg-secondary-container text-on-secondary-container border-l-4 border-primary"
+          : "text-on-surface-variant hover:bg-surface-container-high border-l-4 border-transparent",
+      ].join(" ")}
     >
       <span className="material-symbols-outlined">{icon}</span>
       <span className="font-label-md text-label-md">{label}</span>
-    </NavLink>
+    </Link>
   );
 }
 
 export default function Sidebar() {
   const { signOut } = useAuth();
-  const navigate = useNavigate();
+  const router = useRouter();
+  const pathname = usePathname();
 
   async function handleLogout() {
     await signOut();
-    navigate("/login", { replace: true });
+    router.replace("/login");
   }
 
   return (
@@ -54,18 +56,18 @@ export default function Sidebar() {
 
       <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
         {NAV_ITEMS.map((item) => (
-          <NavItem key={item.to} {...item} />
+          <NavItem key={item.to} {...item} isActive={pathname === item.to} />
         ))}
       </nav>
 
       <div className="p-4">
-        <NavLink
-          to="/attendance"
+        <Link
+          href="/attendance"
           className="w-full bg-primary text-on-primary py-3 rounded-lg font-label-md flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
         >
           <span className="material-symbols-outlined">add</span>
           New Request
-        </NavLink>
+        </Link>
       </div>
 
       <div className="px-4 py-6 border-t border-outline-variant space-y-2">

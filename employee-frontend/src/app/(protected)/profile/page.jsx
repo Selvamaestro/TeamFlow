@@ -1,10 +1,13 @@
+"use client";
+
 import { useEffect, useRef, useState } from "react";
-import EmployeeLayout from "../layouts/EmployeeLayout";
-import { useAuth } from "../context/AuthContext";
-import * as userApi from "../api/user.api";
-import * as attendanceApi from "../api/attendance.api";
-import * as leaveApi from "../api/leave.api";
-import * as rewardApi from "../api/reward.api";
+import Image from "next/image";
+import EmployeeLayout from "../../../components/EmployeeLayout";
+import { useAuth } from "../../../context/AuthContext";
+import * as userApi from "../../../api/user.api";
+import * as attendanceApi from "../../../api/attendance.api";
+import * as leaveApi from "../../../api/leave.api";
+import * as rewardApi from "../../../api/reward.api";
 
 function computeAttendanceStreak(records) {
   // records are sorted desc by date already (backend behavior).
@@ -23,7 +26,7 @@ function computeAttendanceStreak(records) {
   return streak;
 }
 
-export default function Profile() {
+export default function ProfilePage() {
   const { user, refreshUser } = useAuth();
   const fileInputRef = useRef(null);
 
@@ -108,7 +111,13 @@ export default function Profile() {
             <div className="relative w-32 h-32 mx-auto mb-6">
               <div className="w-full h-full rounded-full border-4 border-secondary-container overflow-hidden bg-surface-container-highest flex items-center justify-center">
                 {user.avatarUrl ? (
-                  <img className="w-full h-full object-cover" src={user.avatarUrl} alt={user.name} />
+                  <Image
+                    className="w-full h-full object-cover"
+                    src={user.avatarUrl}
+                    alt={user.name}
+                    width={128}
+                    height={128}
+                  />
                 ) : (
                   <span className="font-headline-lg text-headline-lg text-primary">
                     {user.name?.[0]?.toUpperCase()}

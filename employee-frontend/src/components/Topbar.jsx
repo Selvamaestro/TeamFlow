@@ -1,5 +1,8 @@
+"use client";
+
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "../context/AuthContext";
 import * as notificationApi from "../api/notification.api";
 
@@ -88,7 +91,7 @@ export default function Topbar({ title = "WorkforceConnect" }) {
         </div>
 
         <Link
-          to="/profile"
+          href="/profile"
           className="material-symbols-outlined text-primary-container cursor-pointer active:opacity-80"
           aria-label="Settings"
         >
@@ -96,11 +99,17 @@ export default function Topbar({ title = "WorkforceConnect" }) {
         </Link>
 
         <Link
-          to="/profile"
+          href="/profile"
           className="w-10 h-10 rounded-full overflow-hidden bg-surface-container-highest cursor-pointer active:scale-95 transition-transform border-2 border-primary flex items-center justify-center"
         >
           {user?.avatarUrl ? (
-            <img className="w-full h-full object-cover" src={user.avatarUrl} alt={user.name} />
+            <Image
+              className="w-full h-full object-cover"
+              src={user.avatarUrl}
+              alt={user.name}
+              width={40}
+              height={40}
+            />
           ) : (
             <span className="font-label-md text-primary">{user?.name?.[0]?.toUpperCase() || "?"}</span>
           )}

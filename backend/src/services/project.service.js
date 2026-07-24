@@ -34,15 +34,52 @@ async function listProjects(viewer, { status, client } = {}) {
     .sort({ createdAt: -1 });
 }
 
-// side effect: auto-creates the project's project_group Conversation, pre-populated
-// with every ceo/manager ("admin") plus the creator
-async function createProject(creator, { title, description, client, dueDate, revenue, teamLeader, members }) {
+async function createProject(creator, data) {
+  const {
+    title,
+    description,
+    client,
+    status,
+    startDate,
+    endDate,
+    dueDate,
+    budget = 0,
+    revenue = 0,
+    expenses = 0,
+    paidAmount = 0,
+    pendingAmount,
+    paymentStatus,
+    teamLeader,
+    members,
+  } = data;
+
+  const targetValue = budget || revenue || 0;
+  const computedPending = pendingAmount !== undefined ? pendingAmount : Math.max(0, targetValue - paidAmount);
+  let computedStatus = paymentStatus;
+  if (!computedStatus) {
+    if (paidAmount >= targetValue && targetValue > 0) {
+      computedStatus = "Paid";
+    } else if (paidAmount > 0) {
+      computedStatus = "Partial";
+    } else {
+      computedStatus = "Pending";
+    }
+  }
+
   const project = await Project.create({
     title,
     description,
     client,
-    dueDate,
+    status: status || "planning",
+    startDate,
+    endDate,
+    dueDate: dueDate || endDate,
+    budget,
     revenue,
+    expenses,
+    paidAmount,
+    pendingAmount: computedPending,
+    paymentStatus: computedStatus,
     teamLeader: teamLeader || null,
     members: Array.isArray(members) ? members : [],
     manager: creator.id,
@@ -59,7 +96,21 @@ async function createProject(creator, { title, description, client, dueDate, rev
   return project;
 }
 
-const GENERAL_EDITABLE_FIELDS = ["title", "description", "dueDate", "status"];
+const GENERAL_EDITABLE_FIELDS = [
+  "title",
+  "description",
+  "dueDate",
+  "startDate",
+  "endDate",
+  "status",
+  "budget",
+  "revenue",
+  "expenses",
+  "paidAmount",
+  "pendingAmount",
+  "paymentStatus",
+  "client",
+];
 
 // Team Leader of that project, Manager, CEO, HR
 // Renaming keeps the Conversation's name in sync.
@@ -69,12 +120,25 @@ async function updateProject(project, requester, projectRoleFlags, data) {
     throw new ForbiddenError("Forbidden");
   }
 
-  if (requester.role === "ceo" && data.revenue !== undefined) {
-    project.revenue = data.revenue;
-  }
-
   for (const field of GENERAL_EDITABLE_FIELDS) {
     if (data[field] !== undefined) project[field] = data[field];
+  }
+
+  // Recalculate pendingAmount if budget or paidAmount modified and pending not explicitly set
+  if (data.pendingAmount === undefined && (data.budget !== undefined || data.paidAmount !== undefined || data.revenue !== undefined)) {
+    const targetVal = project.budget || project.revenue || 0;
+    project.pendingAmount = Math.max(0, targetVal - (project.paidAmount || 0));
+  }
+
+  if (data.paymentStatus === undefined && (data.paidAmount !== undefined || data.budget !== undefined || data.revenue !== undefined)) {
+    const targetVal = project.budget || project.revenue || 0;
+    if (project.paidAmount >= targetVal && targetVal > 0) {
+      project.paymentStatus = "Paid";
+    } else if (project.paidAmount > 0) {
+      project.paymentStatus = "Partial";
+    } else {
+      project.paymentStatus = "Pending";
+    }
   }
 
   await project.save();

@@ -55,6 +55,7 @@ export default function CreateProjectPage() {
         clientId: "",
         teamLeaderId: "",
         selectedMembers: [],
+        startDate: new Date().toISOString().split("T")[0],
         dueDate: "",
         revenue: "50000",
         autoChat: true
@@ -166,13 +167,18 @@ export default function CreateProjectPage() {
 
         try {
             // Send payload to backend with teamLeader and members IDs
+            const selectedDueDate = formData.dueDate ? new Date(formData.dueDate) : new Date("2026-12-01");
+            const selectedStartDate = formData.startDate ? new Date(formData.startDate) : new Date();
+
             await projectService.createProject({
                 title: formData.title,
                 description: formData.description,
                 client: formData.clientId || (dbClients[0] ? dbClients[0]._id : undefined),
                 teamLeader: formData.teamLeaderId || undefined,
                 members: formData.selectedMembers,
-                dueDate: formData.dueDate ? new Date(formData.dueDate) : new Date("2026-12-01"),
+                startDate: selectedStartDate,
+                dueDate: selectedDueDate,
+                endDate: selectedDueDate,
                 revenue: Number(formData.revenue) || 50000,
                 status: "planning"
             });
@@ -317,14 +323,23 @@ export default function CreateProjectPage() {
                                 />
                             </div>
 
-                            <div className="form-group">
-                                <label>Target Completion Date</label>
-                                <input
-                                    type="date"
-                                    value={formData.dueDate}
-                                    onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                                />
-                            </div>
+                             <div className="form-group">
+                                 <label>Start Date (Defaults to Today)</label>
+                                 <input
+                                     type="date"
+                                     value={formData.startDate}
+                                     onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                                 />
+                             </div>
+
+                             <div className="form-group">
+                                 <label>Target Completion Date (Due Date)</label>
+                                 <input
+                                     type="date"
+                                     value={formData.dueDate}
+                                     onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                                 />
+                             </div>
 
                             {/* Assign Employees Table Listing Format (Max 3 Members) */}
                             <div className="form-group full-width">

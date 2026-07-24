@@ -101,7 +101,7 @@ async function getAttendanceSummary() {
   const todayRecords = await Attendance.find({
     user: { $in: nonCeoIds },
     date: { $gte: today, $lt: tomorrow },
-    status: { $in: ["present", "half_day"] },
+    status: { $in: ["present", "half_day", "leave"] },
   }).lean();
 
   const presentUserIds = new Set(todayRecords.map((r) => r.user.toString()));
@@ -112,7 +112,7 @@ async function getAttendanceSummary() {
   const monthlyRecords = await Attendance.find({
     user: { $in: nonCeoIds },
     date: { $gte: startOfMonth, $lt: tomorrow },
-    status: { $in: ["present", "half_day"] },
+    status: { $in: ["present", "half_day", "leave"] },
   }).lean();
 
   const userPresentCounts = {};

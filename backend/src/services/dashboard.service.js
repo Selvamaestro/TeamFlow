@@ -23,7 +23,7 @@ async function overview(viewerRole) {
       User.countDocuments({ status: "active" }),
       Project.countDocuments({ status: { $in: ["planning", "in_progress"] } }),
       Client.countDocuments({ status: "active" }),
-      Attendance.countDocuments({ date: { $gte: today, $lt: tomorrow }, status: "present" }),
+      Attendance.countDocuments({ date: { $gte: today, $lt: tomorrow }, status: { $in: ["present", "half_day", "leave"] } }),
       Project.aggregate([
         { $match: { createdAt: { $gte: startOfMonth } } },
         { $group: { _id: null, total: { $sum: "$revenue" } } },

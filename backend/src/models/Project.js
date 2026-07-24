@@ -21,7 +21,18 @@ const projectSchema = new mongoose.Schema(
       default: "planning",
     },
     dueDate: Date,
-    revenue: Number, // CEO-only visibility, stripped elsewhere
+    startDate: Date,
+    endDate: Date,
+    budget: { type: Number, default: 0 }, // Planned project value
+    revenue: { type: Number, default: 0 }, // Actual revenue received
+    expenses: { type: Number, default: 0 }, // Total project expenses
+    paidAmount: { type: Number, default: 0 }, // Amount received from client
+    pendingAmount: { type: Number, default: 0 }, // Remaining amount
+    paymentStatus: {
+      type: String,
+      enum: ["Paid", "Partial", "Pending"],
+      default: "Pending",
+    },
     manager: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // creator/owner
     teamLeader: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     members: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],

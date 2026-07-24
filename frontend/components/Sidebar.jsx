@@ -15,6 +15,16 @@ import {
 } from "lucide-react";
 
 export default function Sidebar({ active = "employees" }) {
+    const handleLogout = (e) => {
+        e.preventDefault();
+        if (typeof window !== "undefined") {
+            localStorage.removeItem("token");
+            localStorage.removeItem("teamflow_token");
+            localStorage.removeItem("user");
+            window.location.href = "/login";
+        }
+    };
+
     return (
         <aside className="sidebar">
             <div className="logo">
@@ -70,7 +80,7 @@ export default function Sidebar({ active = "employees" }) {
                     Settings
                 </a>
 
-                <a href="/login" style={{ color: "#ef4444" }}>
+                <a href="/login" onClick={handleLogout} style={{ color: "#ef4444", cursor: "pointer" }}>
                     <LogOut size={18} />
                     Logout
                 </a>

@@ -43,13 +43,16 @@ const handleLogin = async (e) => {
     const { token, user } = response.data;
 
     localStorage.setItem("token", token);
+    localStorage.setItem("teamflow_token", token);
     localStorage.setItem("user", JSON.stringify(user));
 
     router.push("/dashboard");
   } catch (err) {
-    setError(
-      err.response?.data?.message || "Login failed"
-    );
+    if (!err.response) {
+      setError("Unable to connect to backend server. Please verify backend is running on http://localhost:5000");
+    } else {
+      setError(err.response?.data?.message || "Login failed");
+    }
   } finally {
     setLoading(false);
   }
@@ -98,7 +101,7 @@ const handleLogin = async (e) => {
 
                                 <input
                                     type="email"
-                                    placeholder="ceo@adminpanel.com"
+                                    placeholder="ceo@teamflow.test"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required

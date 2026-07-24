@@ -10,5 +10,7 @@ router.post("/", ctrl.createLeave);
 router.get("/me", ctrl.myLeave);
 router.get("/", requireRole(["hr", "manager", "ceo"]), ctrl.listLeave);
 router.patch("/:id/decision", requireRole(["hr", "manager", "ceo"]), ctrl.decideLeave);
+router.patch("/:id/status", requireRole(["hr", "manager", "ceo"]), ctrl.decideLeave);
+
 
 module.exports = router;

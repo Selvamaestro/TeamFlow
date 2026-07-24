@@ -1,5 +1,4 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-const DEFAULT_CEO_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2YTVmMzYwOTI1ZWExNzkwMjFiOTRlNTEiLCJyb2xlIjoiY2VvIiwiaWF0IjoxNzg0NzE3NzQzLCJleHAiOjE3ODUzMjI1NDN9.36rj7EulhbCPFrp7-E7q9anf9_D7gqZ2LVTk8RwitNA";
 
 export async function apiFetch(endpoint, options = {}) {
     const url = `${API_BASE_URL}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
@@ -9,16 +8,11 @@ export async function apiFetch(endpoint, options = {}) {
         ...options.headers,
     };
 
-
     if (typeof window !== "undefined") {
-        let token = localStorage.getItem("teamflow_token");
-        if (!token) {
-            token = DEFAULT_CEO_TOKEN;
-            localStorage.setItem("teamflow_token", token);
+        const token = localStorage.getItem("token") || localStorage.getItem("teamflow_token");
+        if (token) {
+            defaultHeaders["Authorization"] = `Bearer ${token}`;
         }
-        defaultHeaders["Authorization"] = `Bearer ${token}`;
-    } else {
-        defaultHeaders["Authorization"] = `Bearer ${DEFAULT_CEO_TOKEN}`;
     }
 
     const config = {

@@ -14,28 +14,79 @@ const projectSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
     description: String,
-    client: { type: mongoose.Schema.Types.ObjectId, ref: "Client" },
+
+    client: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Client",
+    },
+
     status: {
       type: String,
-      enum: ["planning", "in_progress", "on_hold", "completed", "cancelled"],
+      enum: [
+        "planning",
+        "in_progress",
+        "on_hold",
+        "completed",
+        "cancelled",
+      ],
       default: "planning",
     },
-    dueDate: Date,
+
     startDate: Date,
+
     endDate: Date,
-    budget: { type: Number, default: 0 }, // Planned project value
-    revenue: { type: Number, default: 0 }, // Actual revenue received
-    expenses: { type: Number, default: 0 }, // Total project expenses
-    paidAmount: { type: Number, default: 0 }, // Amount received from client
-    pendingAmount: { type: Number, default: 0 }, // Remaining amount
+
+    dueDate: Date,
+
+    budget: {
+      type: Number,
+      default: 0,
+    },
+
+    revenue: {
+      type: Number,
+      default: 0,
+    },
+
+    expenses: {
+      type: Number,
+      default: 0,
+    },
+
+    paidAmount: {
+      type: Number,
+      default: 0,
+    },
+
+    pendingAmount: {
+      type: Number,
+      default: 0,
+    },
+
     paymentStatus: {
       type: String,
       enum: ["Paid", "Partial", "Pending"],
       default: "Pending",
     },
-    manager: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // creator/owner
-    teamLeader: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
-    members: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+
+    manager: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+
+    teamLeader: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    members: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+
     documents: [documentSubSchema],
   },
   { timestamps: true }

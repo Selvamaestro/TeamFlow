@@ -1299,4 +1299,13 @@ Agenda
     gap: 12px;
     background: #f8fafc;
 }
+.blue-dot{
 
+    width:10px;
+    height:10px;
+    border-radius:50%;
+    background:#4F8EF7;
+    display:inline-block;
+    margin-right:10px;
+
+}

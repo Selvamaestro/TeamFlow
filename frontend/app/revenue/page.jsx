@@ -14,21 +14,51 @@ import {
     Wallet,
     FileText,
 } from "lucide-react";
+import {
+    ResponsiveContainer,
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+} from "recharts";
 
 export default function RevenuePage() {
     const [series, setSeries] = useState([]);
+    const [user, setUser] = useState(null);
+    const [summary, setSummary] = useState({});
+    const [projects, setProjects] = useState([]);
+    const [search, setSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState("All");
+    const [filteredProjects, setFilteredProjects] = useState([]);
+    const [currentPage, setCurrentPage] = useState(1);
+
+    const projectsPerPage = 5;
     const [loading, setLoading] = useState(true);
     useEffect(() => {
+        const getUser = async () => {
+            try {
+                const response = await api.get("/auth/me"); // Change this if your endpoint is different
+                setUser(response.data.user);
+            } catch (error) {
+                console.error("User API Error:", error);
+            }
+        };
 
         const getRevenue = async () => {
 
             try {
 
+
                 const response = await api.get("/dashboard/revenue");
 
                 console.log(response.data);
 
+                setSummary(response.data.summary);
                 setSeries(response.data.series);
+                setProjects(response.data.projects);
+                setFilteredProjects(response.data.projects);
 
             } catch (error) {
 
@@ -43,9 +73,117 @@ export default function RevenuePage() {
         };
 
         getRevenue();
+        getUser();
 
     }, []);
+    useEffect(() => {
 
+        let filtered = projects;
+
+        // Search
+
+        if (search.trim() !== "") {
+
+            const keyword = search.toLowerCase();
+
+            filtered = filtered.filter((project) =>
+
+                project.title.toLowerCase().includes(keyword) ||
+
+                project.client?.company?.toLowerCase().includes(keyword) ||
+
+                project.status.toLowerCase().includes(keyword)
+
+            );
+
+        }
+
+        // Status Filter
+
+        if (statusFilter !== "All") {
+
+            filtered = filtered.filter(
+
+                (project) => project.status === statusFilter
+
+            );
+
+        }
+
+        setFilteredProjects(filtered);
+
+    }, [search, statusFilter, projects]);
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search, statusFilter]);
+    const totalPages = Math.ceil(
+        filteredProjects.length / projectsPerPage
+    );
+
+    const indexOfLastProject = currentPage * projectsPerPage;
+
+    const indexOfFirstProject =
+        indexOfLastProject - projectsPerPage;
+
+    const currentProjects =
+        filteredProjects.slice(
+            indexOfFirstProject,
+            indexOfLastProject
+        );
+    const exportCSV = () => {
+
+        const headers = [
+            "Project Name",
+            "Client",
+            "Status",
+            "Start Date",
+            "Revenue"
+        ];
+
+        const rows = filteredProjects.map((project) => [
+
+            project.title,
+
+            project.client?.company || "N/A",
+
+            project.status,
+
+            new Date(project.startDate).toLocaleDateString(),
+
+            project.revenue
+
+        ]);
+
+        const csvContent = [
+
+            headers.join(","),
+
+            ...rows.map(row => row.join(","))
+
+        ].join("\n");
+
+        const blob = new Blob([csvContent], {
+
+            type: "text/csv;charset=utf-8;"
+
+        });
+
+        const url = window.URL.createObjectURL(blob);
+
+        const link = document.createElement("a");
+
+        link.href = url;
+
+        link.setAttribute("download", "Revenue_Report.csv");
+
+        document.body.appendChild(link);
+
+        link.click();
+
+        document.body.removeChild(link);
+
+    };
+console.log(user);
     return (
 
         <div className="dashboard-container">
@@ -60,34 +198,41 @@ export default function RevenuePage() {
 
                     <div className="search-box">
 
-                        <Search size={18} />
+                        <Search className="search-icon" size={18} />
 
-                        <input
-                            type="text"
-                            placeholder="Search data..."
-                        />
+<input
+    type="text"
+    placeholder="Search project, client or status..."
+    value={search}
+    onChange={(e) => setSearch(e.target.value)}
+/>
 
                     </div>
 
-                    <div className="topbar-right">
+                    <div className="header-right">
 
-                        <Bell size={20} />
+                        <div className="icons">
+                            <Bell size={20} />
+                        </div>
 
-                        <CircleHelp size={20} />
+                        <div className="icons">
+                            <CircleHelp size={20} />
+                        </div>
 
                         <div className="profile">
 
-                            <div>
+                            <div className="profile-text">
+                                <h4>{user?.name || "User"}</h4>
 
-                                <h4>Profile</h4>
-
-                                <p>Administrator</p>
-
+                                <span>{user?.role?.toUpperCase()}</span>
                             </div>
 
                             <img
-                                src="https://i.pravatar.cc/150?img=12"
-                                alt="profile"
+                                src={
+                                    user?.avatarUrl ||
+                                    `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || "User")}`
+                                }
+                                alt={user?.name || "Profile"}
                             />
 
                         </div>
@@ -172,9 +317,7 @@ export default function RevenuePage() {
                                 </p>
 
                                 <h2>
-
-                                    $248,590.00
-
+                                    ₹{summary?.totalRevenue?.toLocaleString() || 0}
                                 </h2>
 
                                 <div className="growth">
@@ -183,7 +326,7 @@ export default function RevenuePage() {
 
                                         <TrendingUp size={14} />
 
-                                        12.5%
+                                        {summary?.growth || 0}%
 
                                     </span>
 
@@ -215,49 +358,59 @@ export default function RevenuePage() {
 
                         </div>
 
-<div className="chart-area">
+                        <div className="chart-area">
 
-    {loading ? (
+                            {loading ? (
 
-        <p>Loading revenue...</p>
+                                <p>Loading revenue...</p>
 
-    ) : (
+                            ) : (
 
-        <>
-            <div className="bars">
+                                <ResponsiveContainer width="100%" height={320}>
 
-                {series.map((item, index) => (
+                                    <LineChart
+                                        data={series}
+                                        margin={{
+                                            top: 10,
+                                            right: 20,
+                                            left: 10,
+                                            bottom: 10,
+                                        }}
+                                    >
 
-                    <div
-                        key={index}
-                        className="bar"
-                        style={{
-                            height: `${(item.revenue / Math.max(...series.map(s => s.revenue))) * 95}%`,
-                        }}
-                    >
-                        <span>{item.revenue}</span>
-                    </div>
+                                        <CartesianGrid strokeDasharray="3 3" />
 
-                ))}
+                                        <XAxis
+                                            dataKey="period"
+                                        />
 
-            </div>
+                                        <YAxis
+                                            tickFormatter={(value) => `₹${value / 1000}k`}
+                                        />
 
-            <div className="week-labels">
+                                        <Tooltip
+                                            formatter={(value) => [
+                                                `₹${value.toLocaleString()}`,
+                                                "Revenue",
+                                            ]}
+                                        />
 
-                {series.map((item) => (
+                                        <Line
+                                            type="monotone"
+                                            dataKey="revenue"
+                                            stroke="#17305c"
+                                            strokeWidth={3}
+                                            dot={{ r: 5 }}
+                                            activeDot={{ r: 8 }}
+                                        />
 
-                    <span key={item.period}>
-                        {item.period}
-                    </span>
+                                    </LineChart>
 
-                ))}
+                                </ResponsiveContainer>
 
-            </div>
-        </>
+                            )}
 
-    )}
-
-</div>
+                        </div>
 
                     </div>
 
@@ -280,9 +433,7 @@ export default function RevenuePage() {
                             </h4>
 
                             <h2>
-
-                                $1.2M
-
+                                ₹{summary?.availableFunds?.toLocaleString() || 0}
                             </h2>
 
                             <p>
@@ -314,14 +465,12 @@ export default function RevenuePage() {
                             </h4>
 
                             <h2>
-
-                                18 Items
-
+                                {summary?.pendingInvoices || 0} Items
                             </h2>
 
                             <p className="danger">
 
-                                $12,400 overdue
+                                ₹{summary?.overdueAmount?.toLocaleString() || 0} overdue
 
                             </p>
 
@@ -341,11 +490,26 @@ export default function RevenuePage() {
 
                         <div className="table-actions">
 
-                            <button>
-                                Filter
-                            </button>
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                            >
 
-                            <button>
+                                <option value="All">All Status</option>
+
+                                <option value="planning">Planning</option>
+
+                                <option value="in_progress">In Progress</option>
+
+                                <option value="completed">Completed</option>
+
+                                <option value="on_hold">On Hold</option>
+
+                                <option value="cancelled">Cancelled</option>
+
+                            </select>
+
+                            <button onClick={exportCSV}>
                                 Export CSV
                             </button>
 
@@ -370,158 +534,48 @@ export default function RevenuePage() {
                         </thead>
 
                         <tbody>
+                            {currentProjects.map((project) => (
 
-                            <tr>
+                                <tr key={project._id}>
 
-                                <td>
-
-                                    <div className="project">
-
-                                        <div className="project-icon">
-                                            ☁️
+                                    <td>
+                                        <div className="project">
+                                            <div className="project-icon">📁</div>
+                                            {project.title}
                                         </div>
+                                    </td>
 
-                                        Cloud Infrastructure Revamp
+                                    <td>
+                                        {project.client?.company || "N/A"}
+                                    </td>
 
-                                    </div>
+                                    <td>
+                                        <span
+                                            className={
+                                                project.status === "completed"
+                                                    ? "completed"
+                                                    : project.status === "active"
+                                                        ? "active-status"
+                                                        : "hold"
+                                            }
+                                        >
+                                            {project.status}
+                                        </span>
+                                    </td>
 
-                                </td>
+                                    <td>
+                                        {new Date(project.startDate).toLocaleDateString()}
+                                    </td>
 
-                                <td>Starlight Ventures</td>
+                                    <td className="amount">
+                                        ₹{project.revenue.toLocaleString()}
+                                    </td>
 
-                                <td>
-                                    <span className="completed">
-                                        Completed
-                                    </span>
-                                </td>
+                                </tr>
 
-                                <td>Oct 12, 2023</td>
+                            ))}
 
-                                <td className="amount">
-                                    $84,000.00
-                                </td>
 
-                            </tr>
-
-                            <tr>
-
-                                <td>
-
-                                    <div className="project">
-
-                                        <div className="project-icon">
-                                            🛒
-                                        </div>
-
-                                        E-commerce Marketplace App
-
-                                    </div>
-
-                                </td>
-
-                                <td>Vogue Retail Group</td>
-
-                                <td>
-                                    <span className="active-status">
-                                        Active
-                                    </span>
-                                </td>
-
-                                <td>Nov 05, 2023</td>
-
-                                <td className="amount">
-                                    $112,500.00
-                                </td>
-
-                            </tr>
-
-                            <tr>
-
-                                <td>
-
-                                    <div className="project">
-
-                                        <div className="project-icon">
-                                            🔒
-                                        </div>
-
-                                        Cybersecurity Audit Q4
-
-                                    </div>
-
-                                </td>
-
-                                <td>National Bank Corp</td>
-
-                                <td>
-
-                                    <span className="hold">
-
-                                        On Hold
-
-                                    </span>
-
-                                </td>
-
-                                <td>
-
-                                    Dec 01, 2023
-
-                                </td>
-
-                                <td className="amount">
-
-                                    $32,000.00
-
-                                </td>
-
-                            </tr>
-
-                            <tr>
-
-                                <td>
-
-                                    <div className="project">
-
-                                        <div className="project-icon">
-                                            🎨
-                                        </div>
-
-                                        Brand Identity Refresh
-
-                                    </div>
-
-                                </td>
-
-                                <td>
-
-                                    Innovate Digital
-
-                                </td>
-
-                                <td>
-
-                                    <span className="completed">
-
-                                        Completed
-
-                                    </span>
-
-                                </td>
-
-                                <td>
-
-                                    Oct 28, 2023
-
-                                </td>
-
-                                <td className="amount">
-
-                                    $19,250.00
-
-                                </td>
-
-                            </tr>
 
                         </tbody>
 
@@ -531,27 +585,49 @@ export default function RevenuePage() {
 
                         <p>
 
-                            Showing 4 of 12 projects
-
+                            Showing {indexOfFirstProject + 1} - {Math.min(indexOfLastProject, filteredProjects.length)} of {filteredProjects.length} projects
                         </p>
 
                         <div>
 
-                            <button>{"<"}</button>
-
-                            <button className="page-active">
-
-                                1
-
+                            <button
+                                disabled={currentPage === 1}
+                                onClick={() =>
+                                    setCurrentPage(currentPage - 1)
+                                }
+                            >
+                                {"<"}
                             </button>
 
-                            <button>
+                            {Array.from(
+                                { length: totalPages },
+                                (_, index) => (
 
-                                2
+                                    <button
+                                        key={index + 1}
+                                        className={
+                                            currentPage === index + 1
+                                                ? "page-active"
+                                                : ""
+                                        }
+                                        onClick={() =>
+                                            setCurrentPage(index + 1)
+                                        }
+                                    >
+                                        {index + 1}
+                                    </button>
 
+                                )
+                            )}
+
+                            <button
+                                disabled={currentPage === totalPages}
+                                onClick={() =>
+                                    setCurrentPage(currentPage + 1)
+                                }
+                            >
+                                {">"}
                             </button>
-
-                            <button>{">"}</button>
 
                         </div>
 

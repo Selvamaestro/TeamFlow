@@ -21,7 +21,8 @@ const communicationRoutes = require("./routes/communication.routes");
 const notificationRoutes = require("./routes/notification.routes");
 const rewardRoutes = require("./routes/reward.routes");
 const dashboardRoutes = require("./routes/dashboard.routes");
-
+const agendaRoutes = require("./routes/agenda.routes");
+console.log("agendaRoutes:", agendaRoutes);
 const errorHandler = require("./middlewares/errorHandler");
 
 const app = express();
@@ -54,17 +55,31 @@ app.use(base, apiLimiter);
 app.use(`${base}/auth/login`, authLimiter);
 
 app.use(`${base}/auth`, authRoutes);
+
 app.use(`${base}/users`, userRoutes);
+
 app.use(`${base}/clients`, clientRoutes);
+
 app.use(`${base}/projects`, projectRoutes);
+
 app.use(`${base}/projects/:projectId/tasks`, projectTaskRoutes);
+
 app.use(`${base}/tasks`, taskRoutes);
+
 app.use(`${base}/attendance`, attendanceRoutes);
+
 app.use(`${base}/leave`, leaveRoutes);
+
 app.use(`${base}/conversations`, communicationRoutes);
+
 app.use(`${base}/notifications`, notificationRoutes);
+
 app.use(`${base}/rewards`, rewardRoutes);
+
 app.use(`${base}/dashboard`, dashboardRoutes);
+
+app.use(`${base}/agenda`, agendaRoutes);
+
 
 app.use((req, res) => res.status(404).json({ message: "Not found" }));
 app.use(errorHandler);

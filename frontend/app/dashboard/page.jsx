@@ -5,6 +5,7 @@ import api from "@/lib/api";
 import Link from "next/link";
 import "./dashboard.css";
 import Sidebar from "@/components/Sidebar";
+import { useRouter } from "next/navigation";
 import {
     LayoutDashboard,
     Users,
@@ -21,6 +22,15 @@ import {
     Search,
     Plus,
 } from "lucide-react";
+import {
+    ResponsiveContainer,
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    Tooltip,
+    CartesianGrid,
+} from "recharts";
 
 export default function Dashboard() {
     const [dashboard, setDashboard] = useState(null);
@@ -28,30 +38,47 @@ export default function Dashboard() {
     const [leaveRequests, setLeaveRequests] = useState([]);
     const [projects, setProjects] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [weeklySeries, setWeeklySeries] = useState([]);
+    const [agenda, setAgenda] = useState([]);
+    const router = useRouter();
 
 
     useEffect(() => {
 
-        const fetchDashboard = async () => {
+        async function fetchDashboardData() {
 
             try {
 
-                const response = await api.get("/dashboard/overview");
+const [
+    overviewRes,
+    leaveRes,
+    projectRes,
+    revenueRes,
+    userRes,
+    agendaRes
+] = await Promise.all([
 
-                setDashboard(response.data);
-                const leaveResponse = await api.get("/leave?status=pending");
+                    api.get("/dashboard/overview"),
+                    api.get("/leave?status=pending"),
+                    api.get("/projects"),
+                    api.get("/dashboard/revenue"),
+                    api.get("/auth/me"),
+                    api.get("/agenda")
 
-                setLeaveRequests(leaveResponse.data.requests);
+                ]);
 
-                const storedUser = localStorage.getItem("user");
+                setDashboard(overviewRes.data);
 
-                if (storedUser) {
-                    setUser(JSON.parse(storedUser));
-                }
+                setLeaveRequests(leaveRes.data.requests);
 
+                setProjects(projectRes.data.projects);
+
+                setUser(userRes.data.user);
+                setWeeklySeries(revenueRes.data.weeklySeries);
+                setAgenda(agendaRes.data.agenda);
             } catch (error) {
 
-                console.error(error);
+                console.error("Dashboard Error:", error);
 
             } finally {
 
@@ -59,32 +86,13 @@ export default function Dashboard() {
 
             }
 
-        };
-
-        fetchDashboard();
-
-    }, []);
-    useEffect(() => {
-        async function fetchProjects() {
-            try {
-                const response = await api.get("/projects");
-                setProjects(response.data.projects);
-            } catch (error) {
-                console.error(error);
-            } finally {
-                setLoading(false);
-            }
         }
 
-        fetchProjects();
+        fetchDashboardData();
+
     }, []);
     if (loading) {
-        return <h2>Loading Projects...</h2>;
-    }
-    if (loading) {
-
         return <h2>Loading Dashboard...</h2>;
-
     }
 
     return (
@@ -120,24 +128,28 @@ export default function Dashboard() {
                         <div className="icons">
                             <CircleHelp size={20} />
                         </div>
+<Link href="/profile">
+<div
+    className="profile"
+    onClick={() => router.push("/profile")}
+    style={{ cursor: "pointer" }}
+>
+    <div className="profile-text">
+        <h4>{user?.name || "User"}</h4>
+        <span>{user?.role?.toUpperCase()}</span>
+    </div>
 
-                        <div className="profile">
-
-                            <div className="profile-text">
-                                <h4>{user?.name || "User"}</h4>
-
-                                <span>{user?.role?.toUpperCase()}</span>
-                            </div>
-
-                            <img
-                                src={
-                                    user?.avatarUrl ||
-                                    `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || "User")}`
-                                }
-                                alt={user?.name || "Profile"}
-                            />
-
-                        </div>
+    <img
+        src={
+            user?.avatarUrl ||
+            `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                user?.name || "User"
+            )}`
+        }
+        alt={user?.name || "Profile"}
+    />
+</div>
+</Link>
 
                     </div>
 
@@ -417,35 +429,40 @@ export default function Dashboard() {
 
                                 <p>Past 7 days performance</p>
 
-                                <div className="chart">
+                                <div style={{ width: "100%", height: 260 }}>
 
-                                    <div className="bar h40"><span>$12k</span></div>
+                                    <ResponsiveContainer>
 
-                                    <div className="bar h55"><span>$18k</span></div>
+                                        <BarChart data={weeklySeries}>
 
-                                    <div className="bar h45"><span>$14k</span></div>
+                                            <CartesianGrid strokeDasharray="3 3" />
 
-                                    <div className="bar h70"><span>$24k</span></div>
+                                            <XAxis dataKey="day" />
 
-                                    <div className="bar h90"><span>$32k</span></div>
+                                            <YAxis
+                                                tickFormatter={(value) => `₹${value / 1000}k`}
+                                            />
 
-                                    <div className="bar active h85"><span>$29k</span></div>
+                                            <Tooltip
+                                                formatter={(value) => [
+                                                    `₹${value.toLocaleString()}`,
+                                                    "Revenue"
+                                                ]}
+                                            />
 
-                                    <div className="bar active h95"><span>$34k</span></div>
+                                            <Bar
+                                                dataKey="revenue"
+                                                fill="#17305c"
+                                                radius={[8, 8, 0, 0]}
+                                            />
+
+                                        </BarChart>
+
+                                    </ResponsiveContainer>
 
                                 </div>
 
-                                <div className="days">
 
-                                    <span>Mon</span>
-                                    <span>Tue</span>
-                                    <span>Wed</span>
-                                    <span>Thu</span>
-                                    <span>Fri</span>
-                                    <span className="active-day">Sat</span>
-                                    <span className="active-day">Sun</span>
-
-                                </div>
 
                             </div>
 
@@ -459,33 +476,53 @@ export default function Dashboard() {
                                         <ClipboardList size={24} />
                                     </div>
 
-                                    <h3>Your Agenda</h3>
+                                    <h3>Today's Schedule</h3>
 
                                 </div>
 
-                                <p>
-                                    3 high-priority meetings today.
-                                </p>
 
-                                <ul>
 
-                                    <li>
+<ul>
 
-                                        <span className="yellow-dot"></span>
+{agenda.length === 0 ? (
 
-                                        Quarterly Review: Finance
+    <p>No events scheduled for today.</p>
 
-                                    </li>
+) : (
 
-                                    <li>
+    agenda
+        .filter((event) => {
 
-                                        <span className="green-dot"></span>
+            const today = new Date().toDateString();
 
-                                        Board Member Luncheon
+            return (
+                new Date(event.date).toDateString() === today
+            );
 
-                                    </li>
+        })
+        .map((event) => (
 
-                                </ul>
+            <li key={event._id}>
+
+                <span
+                    className={
+                        event.type === "Meeting"
+                            ? "yellow-dot"
+                            : event.type === "Task"
+                            ? "green-dot"
+                            : "blue-dot"
+                    }
+                ></span>
+
+                <strong>{event.time}</strong> - {event.title}
+
+            </li>
+
+        ))
+
+)}
+
+</ul>
 
                             </div>
 

@@ -13,8 +13,14 @@ async function overview(req, res, next) {
 // GET /dashboard/revenue  (CEO only)
 async function revenue(req, res, next) {
   try {
-    const series = await dashboardService.revenueSeries(req.query.range);
-    return res.status(200).json({ series });
+    const data = await dashboardService.revenueSeries(req.query.range);
+
+    console.log("Revenue API Response:");
+    console.log(data.weeklySeries);
+    console.log(data);
+
+    return res.status(200).json(data);
+
   } catch (err) {
     next(err);
   }

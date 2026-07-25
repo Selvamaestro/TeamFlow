@@ -70,8 +70,8 @@ export default function Sidebar({ active = "employees" }) {
             </nav>
 
             <div className="sidebar-bottom">
-                <Link href="/employees/add" className="project-btn" style={{ textDecoration: "none" }}>
-                    <Plus size={18} />
+                <Link href="/employees/add" className="project-btn" style={{ textDecoration: "none", color: "#ffffff", fontWeight: 600 }}>
+                    <Plus size={18} color="#ffffff" />
                     Add Employee
                 </Link>
 

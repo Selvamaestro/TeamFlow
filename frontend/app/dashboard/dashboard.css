@@ -100,13 +100,14 @@ body {
     padding: 25px;
 }
 
-.project-btn {
+.project-btn,
+a.project-btn {
 
     width: 100%;
 
     background: #002045;
 
-    color: #fff;
+    color: #ffffff !important;
 
     border: none;
 
@@ -118,11 +119,15 @@ body {
 
     font-size: 15px;
 
+    font-weight: 600;
+
     margin-bottom: 25px;
+    margin-top: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
+    text-decoration: none;
 }
 
 .sidebar-bottom a {

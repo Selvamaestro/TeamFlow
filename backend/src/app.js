@@ -29,7 +29,13 @@ const app = express();
 
 app.set("trust proxy", 1);
 
-app.use(helmet());
+app.use(
+    helmet({
+        crossOriginResourcePolicy: {
+            policy: "cross-origin",
+        },
+    })
+);
 app.use(compression());
 app.use(
   cors({
@@ -40,7 +46,12 @@ app.use(
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 app.use(mongoSanitize()); 
+const path = require("path");
 
+app.use(
+    "/uploads",
+    express.static(path.join(process.cwd(), "uploads"))
+);
 app.use(
   morgan(config.env === "production" ? "combined" : "dev", {
     stream: { write: (msg) => logger.info(msg.trim()) },

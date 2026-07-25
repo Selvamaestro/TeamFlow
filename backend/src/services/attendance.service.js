@@ -101,10 +101,19 @@ async function getAttendanceSummary() {
   const todayRecords = await Attendance.find({
     user: { $in: nonCeoIds },
     date: { $gte: today, $lt: tomorrow },
-    status: { $in: ["present", "half_day", "leave"] },
   }).lean();
 
-  const presentUserIds = new Set(todayRecords.map((r) => r.user.toString()));
+  const todayRecordMap = {};
+  todayRecords.forEach((r) => {
+    todayRecordMap[r.user.toString()] = r;
+  });
+
+  const presentUserIds = new Set(
+    todayRecords
+      .filter((r) => ["present", "half_day"].includes(r.status))
+      .map((r) => r.user.toString())
+  );
+
   const todayPresent = presentUserIds.size;
   const todayAbsent = Math.max(0, totalEmployees - todayPresent);
 
@@ -121,21 +130,46 @@ async function getAttendanceSummary() {
     userPresentCounts[uid] = (userPresentCounts[uid] || 0) + (r.status === "half_day" ? 0.5 : 1);
   });
 
+  const presentEmployees = [];
+  const absentEmployees = [];
+
   const monthlyInsights = nonCeoUsers.map((u) => {
-    const pCount = userPresentCounts[u._id.toString()] || 0;
+    const uid = u._id.toString();
+    const pCount = userPresentCounts[uid] || 0;
     const percentage = totalDaysPassed > 0 ? Math.min(100, Math.round((pCount / totalDaysPassed) * 100)) : 100;
     const diff = percentage - 85;
     const trend = diff >= 0 ? `+${diff}%` : `${diff}%`;
 
-    return {
-      id: u._id.toString(),
+    const todayRec = todayRecordMap[uid];
+    const isPresent = presentUserIds.has(uid);
+    const todayStatus = isPresent
+      ? (todayRec?.status === "half_day" ? "Half Day" : "Present")
+      : (todayRec?.status === "leave" ? "On Leave" : "Absent");
+    const checkInTime = todayRec?.checkIn
+      ? new Date(todayRec.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : null;
+
+    const empData = {
+      id: uid,
       name: u.name,
+      employeeId: u.employeeId,
       role: u.designation || u.role,
       dept: u.department || "General",
       presentDays: `${pCount} / ${totalDaysPassed} days`,
       percentage,
       trend,
+      isPresentToday: isPresent,
+      todayStatus,
+      checkInTime,
     };
+
+    if (isPresent) {
+      presentEmployees.push(empData);
+    } else {
+      absentEmployees.push(empData);
+    }
+
+    return empData;
   });
 
   return {
@@ -143,6 +177,8 @@ async function getAttendanceSummary() {
     todayAbsent,
     totalEmployees,
     monthlyInsights,
+    presentEmployees,
+    absentEmployees,
   };
 }
 

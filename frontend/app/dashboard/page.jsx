@@ -49,14 +49,14 @@ export default function Dashboard() {
 
             try {
 
-const [
-    overviewRes,
-    leaveRes,
-    projectRes,
-    revenueRes,
-    userRes,
-    agendaRes
-] = await Promise.all([
+                const [
+                    overviewRes,
+                    leaveRes,
+                    projectRes,
+                    revenueRes,
+                    userRes,
+                    agendaRes
+                ] = await Promise.all([
 
                     api.get("/dashboard/overview"),
                     api.get("/leave?status=pending"),
@@ -131,28 +131,29 @@ const [
                                 Executive Dashboard — Real-time performance metrics, workforce attendance, financial summaries, and daily agenda.
                             </div>
                         </div>
-<Link href="/profile">
-<div
-    className="profile"
-    onClick={() => router.push("/profile")}
-    style={{ cursor: "pointer" }}
->
-    <div className="profile-text">
-        <h4>{user?.name || "User"}</h4>
-        <span>{user?.role?.toUpperCase()}</span>
-    </div>
+                        <Link href="/profile">
+                            <div
+                                className="profile"
+                                onClick={() => router.push("/profile")}
+                                style={{ cursor: "pointer" }}
+                            >
+                                <div className="profile-text">
+                                    <h4>{user?.name || "User"}</h4>
+                                    <span>{user?.role?.toUpperCase()}</span>
+                                </div>
 
-    <img
-        src={
-            user?.avatarUrl ||
-            `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                user?.name || "User"
-            )}`
-        }
-        alt={user?.name || "Profile"}
-    />
-</div>
-</Link>
+<img
+    src={
+        user?.avatarUrl
+            ? `http://localhost:5000${user.avatarUrl}`
+            : `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                  user?.name || "User"
+              )}`
+    }
+    alt={user?.name || "Profile"}
+/>
+                            </div>
+                        </Link>
 
                     </div>
 
@@ -485,47 +486,47 @@ const [
 
 
 
-<ul>
+                                <ul>
 
-{agenda.length === 0 ? (
+                                    {agenda.length === 0 ? (
 
-    <p>No events scheduled for today.</p>
+                                        <p>No events scheduled for today.</p>
 
-) : (
+                                    ) : (
 
-    agenda
-        .filter((event) => {
+                                        agenda
+                                            .filter((event) => {
 
-            const today = new Date().toDateString();
+                                                const today = new Date().toDateString();
 
-            return (
-                new Date(event.date).toDateString() === today
-            );
+                                                return (
+                                                    new Date(event.date).toDateString() === today
+                                                );
 
-        })
-        .map((event) => (
+                                            })
+                                            .map((event) => (
 
-            <li key={event._id}>
+                                                <li key={event._id}>
 
-                <span
-                    className={
-                        event.type === "Meeting"
-                            ? "yellow-dot"
-                            : event.type === "Task"
-                            ? "green-dot"
-                            : "blue-dot"
-                    }
-                ></span>
+                                                    <span
+                                                        className={
+                                                            event.type === "Meeting"
+                                                                ? "yellow-dot"
+                                                                : event.type === "Task"
+                                                                    ? "green-dot"
+                                                                    : "blue-dot"
+                                                        }
+                                                    ></span>
 
-                <strong>{event.time}</strong> - {event.title}
+                                                    <strong>{event.time}</strong> - {event.title}
 
-            </li>
+                                                </li>
 
-        ))
+                                            ))
 
-)}
+                                    )}
 
-</ul>
+                                </ul>
 
                             </div>
 

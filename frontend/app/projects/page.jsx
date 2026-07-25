@@ -155,8 +155,11 @@ export default function ProjectsPage() {
                             <Bell size={20} />
                         </div>
 
-                        <div className="icons">
+                        <div className="icons help-tooltip-wrapper">
                             <CircleHelp size={20} />
+                            <div className="help-tooltip-popover">
+                                Projects Hub — View, create, and manage active corporate initiatives, contract revenues, team leads, and project milestones.
+                            </div>
                         </div>
 
                         <Link href="/profile">

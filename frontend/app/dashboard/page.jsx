@@ -125,8 +125,11 @@ const [
                             <Bell size={20} />
                         </div>
 
-                        <div className="icons">
+                        <div className="icons help-tooltip-wrapper">
                             <CircleHelp size={20} />
+                            <div className="help-tooltip-popover">
+                                Executive Dashboard — Real-time performance metrics, workforce attendance, financial summaries, and daily agenda.
+                            </div>
                         </div>
 <Link href="/profile">
 <div

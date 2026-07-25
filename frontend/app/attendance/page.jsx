@@ -175,8 +175,11 @@ export default function AttendancePage() {
                             <Bell size={20} />
                         </div>
 
-                        <div className="icons">
+                        <div className="icons help-tooltip-wrapper">
                             <CircleHelp size={20} />
+                            <div className="help-tooltip-popover">
+                                Attendance &amp; Leave — Track real-time present/absent employee status, check-in logs, and manage pending leave approvals.
+                            </div>
                         </div>
 
                         <Link href="/profile">

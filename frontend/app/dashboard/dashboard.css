@@ -224,6 +224,56 @@ a.project-btn {
     cursor: pointer;
 }
 
+/* Question Mark Popover Tooltip (Matches Reference Image) */
+.help-tooltip-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.help-tooltip-popover {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    top: calc(100% + 12px);
+    right: -10px;
+    background: #404040;
+    color: #ffffff;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    white-space: normal;
+    width: max-content;
+    max-width: 280px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+    z-index: 1000;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    transform: translateY(-5px);
+    pointer-events: none;
+    text-align: left;
+}
+
+.help-tooltip-popover::before {
+    content: "";
+    position: absolute;
+    top: -7px;
+    right: 18px;
+    width: 0;
+    height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-bottom: 7px solid #404040;
+}
+
+.help-tooltip-wrapper:hover .help-tooltip-popover {
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0);
+}
+
 .profile {
 
     display: flex;

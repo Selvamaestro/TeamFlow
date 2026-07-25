@@ -169,8 +169,11 @@ export default function ClientsPage() {
                             <Bell size={20} />
                         </div>
 
-                        <div className="icons">
+                        <div className="icons help-tooltip-wrapper">
                             <CircleHelp size={20} />
+                            <div className="help-tooltip-popover">
+                                Client Directory — Manage client accounts, primary contacts, account statuses, and linked corporate projects.
+                            </div>
                         </div>
 
                         <Link href="/profile">

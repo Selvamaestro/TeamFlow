@@ -53,6 +53,14 @@ async function createProject(creator, data) {
     members,
   } = data;
 
+  if (client) {
+    const Client = require("../models/Client");
+    const clientDoc = await Client.findById(client);
+    if (clientDoc && (clientDoc.status || "active").toLowerCase() === "inactive") {
+      throw new BadRequestError("the client is inactive");
+    }
+  }
+
   const now = new Date();
   const effectiveStartDate = startDate ? new Date(startDate) : now;
   const effectiveDueDate = dueDate ? new Date(dueDate) : (endDate ? new Date(endDate) : null);

@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import {
     LayoutDashboard,
     Users,
-    DollarSign,
+    IndianRupee,
     FolderKanban,
     CalendarDays,
     MessageSquare,
@@ -217,7 +217,7 @@ const [
                             <div className="card-top">
 
                                 <div className="icon-box revenue-icon">
-                                    <DollarSign size={28} />
+                                    <IndianRupee size={28} />
                                 </div>
 
                                 <span className="badge green">
@@ -238,7 +238,7 @@ const [
 
                             <small>
                                 Projected monthly target:
-                                <strong> $1.1M</strong>
+                                <strong> ₹1.1M</strong>
                             </small>
 
                         </div>

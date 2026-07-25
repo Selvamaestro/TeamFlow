@@ -10,7 +10,7 @@ import { userService } from "../../../services/userService";
 import {
     LayoutDashboard,
     Users,
-    DollarSign,
+    IndianRupee,
     FolderKanban,
     CalendarDays,
     MessageSquare,
@@ -450,7 +450,7 @@ export default function ProjectDetailPage({ params }) {
                                     </span>
                                 </div>
                                 <div style={{ fontSize: "16px", fontWeight: "bold", color: "#002045" }}>
-                                    Contract Revenue: <span style={{ color: "#169c52" }}>${Number(project.revenue).toLocaleString()}</span>
+                                    Contract Revenue: <span style={{ color: "#169c52" }}>₹{Number(project.revenue).toLocaleString()}</span>
                                 </div>
                             </div>
 
@@ -508,7 +508,7 @@ export default function ProjectDetailPage({ params }) {
                                     <div className="overview-card">
                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
                                             <h3 style={{ color: "#002045", fontSize: "20px", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
-                                                <DollarSign size={22} color="#002045" /> Financials &amp; Payment Tracking
+                                                <IndianRupee size={22} color="#002045" /> Financials &amp; Payment Tracking
                                             </h3>
                                             <span
                                                 className={`badge ${project.paymentStatus === "Paid" ? "green" : project.paymentStatus === "Partial" ? "blue" : "yellow"}`}
@@ -522,19 +522,19 @@ export default function ProjectDetailPage({ params }) {
                                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "15px", marginBottom: "25px" }}>
                                             <div style={{ background: "#f8fbff", padding: "16px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
                                                 <span style={{ fontSize: "12px", color: "#777", textTransform: "uppercase", display: "block", marginBottom: "4px" }}>Contract Revenue</span>
-                                                <strong style={{ fontSize: "18px", color: "#002045" }}>${Number(project.revenue).toLocaleString()}</strong>
+                                                <strong style={{ fontSize: "18px", color: "#002045" }}>₹{Number(project.revenue).toLocaleString()}</strong>
                                             </div>
                                             <div style={{ background: "#fff5f5", padding: "16px", borderRadius: "12px", border: "1px solid #fed7d7" }}>
                                                 <span style={{ fontSize: "12px", color: "#c53030", textTransform: "uppercase", display: "block", marginBottom: "4px" }}>Expenses</span>
-                                                <strong style={{ fontSize: "18px", color: "#c53030" }}>${Number(project.expenses).toLocaleString()}</strong>
+                                                <strong style={{ fontSize: "18px", color: "#c53030" }}>₹{Number(project.expenses).toLocaleString()}</strong>
                                             </div>
                                             <div style={{ background: "#f0fff4", padding: "16px", borderRadius: "12px", border: "1px solid #c6f6d5" }}>
                                                 <span style={{ fontSize: "12px", color: "#22543d", textTransform: "uppercase", display: "block", marginBottom: "4px" }}>Paid Amount</span>
-                                                <strong style={{ fontSize: "18px", color: "#276749" }}>${Number(project.paidAmount).toLocaleString()}</strong>
+                                                <strong style={{ fontSize: "18px", color: "#276749" }}>₹{Number(project.paidAmount).toLocaleString()}</strong>
                                             </div>
                                             <div style={{ background: "#fffaf0", padding: "16px", borderRadius: "12px", border: "1px solid #feebc8" }}>
                                                 <span style={{ fontSize: "12px", color: "#9c4221", textTransform: "uppercase", display: "block", marginBottom: "4px" }}>Pending Amount</span>
-                                                <strong style={{ fontSize: "18px", color: "#dd6b20" }}>${Number(project.pendingAmount).toLocaleString()}</strong>
+                                                <strong style={{ fontSize: "18px", color: "#dd6b20" }}>₹{Number(project.pendingAmount).toLocaleString()}</strong>
                                             </div>
                                         </div>
 
@@ -545,7 +545,7 @@ export default function ProjectDetailPage({ params }) {
                                             </h4>
                                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", marginBottom: "15px" }}>
                                                 <div>
-                                                    <label style={{ display: "block", fontSize: "13px", color: "#444", marginBottom: "6px", fontWeight: "bold" }}>Total Expenses ($ USD)</label>
+                                                    <label style={{ display: "block", fontSize: "13px", color: "#444", marginBottom: "6px", fontWeight: "bold" }}>Total Expenses (₹ INR)</label>
                                                     <input
                                                         type="number"
                                                         min="0"
@@ -556,7 +556,7 @@ export default function ProjectDetailPage({ params }) {
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label style={{ display: "block", fontSize: "13px", color: "#444", marginBottom: "6px", fontWeight: "bold" }}>Paid Amount ($ USD)</label>
+                                                    <label style={{ display: "block", fontSize: "13px", color: "#444", marginBottom: "6px", fontWeight: "bold" }}>Paid Amount (₹ INR)</label>
                                                     <input
                                                         type="number"
                                                         min="0"
@@ -779,7 +779,7 @@ export default function ProjectDetailPage({ params }) {
                                         </select>
                                     </div>
                                     <div>
-                                        <label style={{ display: "block", fontSize: "13px", color: "#334155", fontWeight: "bold", marginBottom: "6px" }}>Contract Revenue ($ USD)</label>
+                                        <label style={{ display: "block", fontSize: "13px", color: "#334155", fontWeight: "bold", marginBottom: "6px" }}>Contract Revenue (₹ INR)</label>
                                         <input
                                             type="number"
                                             value={editFormData.revenue}

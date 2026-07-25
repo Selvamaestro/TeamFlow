@@ -9,7 +9,7 @@ import { clientService } from "../../services/clientService";
 import {
     LayoutDashboard,
     Users,
-    DollarSign,
+    IndianRupee,
     FolderKanban,
     CalendarDays,
     MessageSquare,
@@ -83,7 +83,7 @@ export default function ProjectsPage() {
                             actionLabel: "View Details",
                             category: p.status === "archived" ? "archived" : "active",
                             starred: true,
-                            revenue: p.revenue ? `$${Number(p.revenue).toLocaleString()}` : "$50,000"
+                            revenue: p.revenue ? `₹${Number(p.revenue).toLocaleString()}` : "₹50,000"
                         };
                     });
 

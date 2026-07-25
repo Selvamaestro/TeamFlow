@@ -10,7 +10,7 @@ import { projectService } from "../../../services/projectService";
 import {
     LayoutDashboard,
     Users,
-    DollarSign,
+    IndianRupee,
     FolderKanban,
     CalendarDays,
     MessageSquare,
@@ -127,12 +127,12 @@ export default function ClientDetailPage({ params }) {
         name: p.title,
         date: p.dueDate ? new Date(p.dueDate).toLocaleDateString() : "Dec 2026",
         status: (p.status || "planning").toUpperCase(),
-        revenue: p.revenue ? `$${Number(p.revenue).toLocaleString()}` : "$0"
+        revenue: p.revenue ? `₹${Number(p.revenue).toLocaleString()}` : "₹0"
     }));
 
     const totalCalculatedRevenue = dbProjects.length > 0
-        ? `$${dbProjects.reduce((acc, p) => acc + (p.revenue || 0), 0).toLocaleString()}`
-        : "$0";
+        ? `₹${dbProjects.reduce((acc, p) => acc + (p.revenue || 0), 0).toLocaleString()}`
+        : "₹0";
 
     return (
         <div className="dashboard-container">
@@ -286,7 +286,7 @@ export default function ClientDetailPage({ params }) {
                                 <div className="kpi-card">
                                     <div className="card-top">
                                         <div className="icon-box revenue-icon">
-                                            <DollarSign size={26} color="#002045" />
+                                            <IndianRupee size={26} color="#002045" />
                                         </div>
                                     </div>
                                     <div className="card-title">Total Revenue</div>

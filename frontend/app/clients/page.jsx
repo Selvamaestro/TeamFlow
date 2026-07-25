@@ -8,7 +8,7 @@ import { clientService } from "../../services/clientService";
 import {
     LayoutDashboard,
     Users,
-    DollarSign,
+    IndianRupee,
     FolderKanban,
     CalendarDays,
     MessageSquare,

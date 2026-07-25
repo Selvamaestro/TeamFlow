@@ -4,7 +4,7 @@ import Link from "next/link";
 import {
     LayoutDashboard,
     Users,
-    DollarSign,
+    IndianRupee,
     FolderKanban,
     CalendarDays,
     MessageSquare,
@@ -44,7 +44,7 @@ export default function Sidebar({ active = "employees" }) {
                 </Link>
 
                 <Link href="/revenue" className={active === "revenue" ? "active" : ""}>
-                    <DollarSign size={20} />
+                    <IndianRupee size={20} />
                     Revenue
                 </Link>
 
@@ -70,8 +70,8 @@ export default function Sidebar({ active = "employees" }) {
             </nav>
 
             <div className="sidebar-bottom">
-                <Link href="/employees/add" className="project-btn" style={{ textDecoration: "none" }}>
-                    <Plus size={18} />
+                <Link href="/employees/add" className="project-btn" style={{ textDecoration: "none", color: "#ffffff", fontWeight: 600 }}>
+                    <Plus size={18} color="#ffffff" />
                     Add Employee
                 </Link>
 

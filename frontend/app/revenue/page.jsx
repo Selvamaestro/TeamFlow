@@ -215,8 +215,11 @@ console.log(user);
                             <Bell size={20} />
                         </div>
 
-                        <div className="icons">
+                        <div className="icons help-tooltip-wrapper">
                             <CircleHelp size={20} />
+                            <div className="help-tooltip-popover">
+                                Revenue Insights — Real-time fiscal monitoring, monthly revenue trends, liquidity ratios, and project profitability analysis.
+                            </div>
                         </div>
 
                         <div className="profile">

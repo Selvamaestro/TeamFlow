@@ -5,10 +5,11 @@ import Link from "next/link";
 import "../dashboard/dashboard.css";
 import Sidebar from "@/components/Sidebar";
 import { clientService } from "../../services/clientService";
+import api from "@/lib/api";
 import {
     LayoutDashboard,
     Users,
-    DollarSign,
+    IndianRupee,
     FolderKanban,
     CalendarDays,
     MessageSquare,
@@ -43,6 +44,7 @@ export default function ClientsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [feedbackText, setFeedbackText] = useState("");
     const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+    const [user, setUser] = useState(null);
 
     // Live Clients State loaded exclusively from MongoDB database
     const [clientsList, setClientsList] = useState([]);
@@ -52,6 +54,9 @@ export default function ClientsPage() {
         async function fetchDbClients() {
             setIsLoading(true);
             try {
+                api.get("/auth/me").then(res => {
+                    if (res?.data?.user) setUser(res.data.user);
+                }).catch(() => null);
                 const res = await clientService.getClients();
                 if (res && res.clients && Array.isArray(res.clients)) {
                     const mappedDbClients = res.clients.map(c => {
@@ -160,19 +165,34 @@ export default function ClientsPage() {
                     </div>
 
                     <div className="header-right">
-                        <Bell className="icons" />
-                        <CircleHelp className="icons" />
+                        <div className="icons">
+                            <Bell size={20} />
+                        </div>
 
-                        <div className="profile">
-                            <img
-                                src="https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&auto=format&fit=crop&q=80"
-                                alt="Elena Rodriguez"
-                            />
-                            <div>
-                                <h4>Elena Rodriguez</h4>
-                                <span>Managing Director</span>
+                        <div className="icons help-tooltip-wrapper">
+                            <CircleHelp size={20} />
+                            <div className="help-tooltip-popover">
+                                Client Directory — Manage client accounts, primary contacts, account statuses, and linked corporate projects.
                             </div>
                         </div>
+
+                        <Link href="/profile">
+                            <div className="profile" style={{ cursor: "pointer" }}>
+                                <div className="profile-text">
+                                    <h4>{user?.name || "User"}</h4>
+                                    <span>{user?.role?.toUpperCase() || "ADMINISTRATOR"}</span>
+                                </div>
+                                <img
+                                    src={
+                                        user?.avatarUrl ||
+                                        `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                            user?.name || "User"
+                                        )}`
+                                    }
+                                    alt={user?.name || "Profile"}
+                                />
+                            </div>
+                        </Link>
                     </div>
                 </header>
 

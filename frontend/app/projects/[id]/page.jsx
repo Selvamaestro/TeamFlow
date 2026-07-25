@@ -6,10 +6,11 @@ import { useRouter } from "next/navigation";
 import "../../dashboard/dashboard.css";
 import Sidebar from "@/components/Sidebar";
 import { projectService } from "../../../services/projectService";
+import { userService } from "../../../services/userService";
 import {
     LayoutDashboard,
     Users,
-    DollarSign,
+    IndianRupee,
     FolderKanban,
     CalendarDays,
     MessageSquare,
@@ -36,7 +37,10 @@ import {
     AlertCircle,
     Trash2,
     Shield,
-    UserCheck
+    UserCheck,
+    TrendingUp,
+    CreditCard,
+    X
 } from "lucide-react";
 
 export default function ProjectDetailPage({ params }) {
@@ -48,12 +52,38 @@ export default function ProjectDetailPage({ params }) {
     const [isLoading, setIsLoading] = useState(true);
     const [isDeleting, setIsDeleting] = useState(false);
 
+    // Financial update state
+    const [expensesInput, setExpensesInput] = useState("");
+    const [paidAmountInput, setPaidAmountInput] = useState("");
+    const [isSavingFinancials, setIsSavingFinancials] = useState(false);
+    const [financialsMessage, setFinancialsMessage] = useState("");
+
+    // Edit Project Modal state (For CEO / Managers)
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isUpdatingProject, setIsUpdatingProject] = useState(false);
+    const [editErrorMessage, setEditErrorMessage] = useState("");
+    const [dbTeamLeaders, setDbTeamLeaders] = useState([]);
+    const [dbEmployees, setDbEmployees] = useState([]);
+    const [employeeSearchQuery, setEmployeeSearchQuery] = useState("");
+    const [memberLimitWarning, setMemberLimitWarning] = useState("");
+
+    const [editFormData, setEditFormData] = useState({
+        title: "",
+        description: "",
+        status: "planning",
+        startDate: "",
+        dueDate: "",
+        revenue: "50000",
+        teamLeaderId: "",
+        selectedMembers: []
+    });
+
     const handleDeleteProject = async () => {
-        if (!project) return;
-        if (confirm(`Are you sure you want to delete project "${project.title}" permanently from MongoDB database?`)) {
+        if (!dbProject) return;
+        if (confirm(`Are you sure you want to delete project "${dbProject.title}" permanently from MongoDB database?`)) {
             setIsDeleting(true);
             try {
-                await projectService.deleteProject(project.id);
+                await projectService.deleteProject(dbProject.id);
             } catch (err) {
                 console.warn("Delete project notice:", err.message);
             }
@@ -61,95 +91,278 @@ export default function ProjectDetailPage({ params }) {
         }
     };
 
-    // Load Live Project from MongoDB
+    // Load available Team Leaders and Employees for edit modal assignment
     useEffect(() => {
-        async function fetchProjectDetails() {
-            setIsLoading(true);
+        async function fetchUsersList() {
             try {
-                let raw = null;
-                try {
-                    const res = await projectService.getProjectById(projectId);
-                    if (res && res.project) raw = res.project;
-                } catch (e) {
-                    // Fallback search
-                }
-
-                if (!raw) {
-                    const listRes = await projectService.getProjects();
-                    if (listRes?.projects) {
-                        raw = listRes.projects.find(p => p._id === projectId || p.id === projectId);
-                    }
-                }
-
-                if (raw) {
-                    const leadObj = typeof raw.teamLeader === "object" ? raw.teamLeader : null;
-                    const leadName = leadObj ? (leadObj.name || leadObj.email) : "Unassigned Team Leader";
-                    const leadRole = leadObj ? (leadObj.designation || (leadObj.role ? leadObj.role.toUpperCase() : "Team Leader")) : "Team Leader";
-                    const leadAvatar = leadObj?.avatarUrl || "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80";
-
-                    const membersList = Array.isArray(raw.members)
-                        ? raw.members.map(m => {
-                            if (typeof m === "object" && m) {
-                                return {
-                                    id: m._id,
-                                    name: m.name || m.email,
-                                    role: m.designation || (m.role ? m.role.toUpperCase() : "Employee"),
-                                    email: m.email,
-                                    employeeId: m.employeeId || "",
-                                    avatar: m.avatarUrl || null,
-                                    initials: m.name ? m.name.substring(0, 2).toUpperCase() : "EM"
-                                };
-                            }
-                            return null;
-                        }).filter(Boolean)
-                        : [];
-
-                    setDbProject({
-                        id: raw._id || raw.id,
-                        title: raw.title || "Project Initiative",
-                        client: typeof raw.client === "object" ? (raw.client.company || raw.client.name) : "Client Enterprise",
-                        lead: leadName,
-                        leadRole: leadRole,
-                        leadAvatar: leadAvatar,
-                        status: raw.status ? (raw.status.charAt(0).toUpperCase() + raw.status.slice(1)) : "In Progress",
-                        statusType: raw.status === "completed" ? "green" : raw.status === "delayed" ? "red" : "blue",
-                        progress: raw.status === "completed" ? 100 : 65,
-                        dueDate: raw.dueDate ? new Date(raw.dueDate).toLocaleDateString() : "Dec 2026",
-                        description: raw.description || "Core enterprise software engineering workflow and infrastructure implementation.",
-                        priority: "High - Tier 1",
-                        revenue: raw.revenue ? `$${Number(raw.revenue).toLocaleString()}` : "$50,000",
-                        subProgress: [
-                            { title: "Architecture & Design", status: "Completed", percent: 100 },
-                            { title: "Frontend UI Components", status: "In Progress", percent: 80 },
-                            { title: "Backend API Integration", status: "In Progress", percent: 60 }
-                        ],
-                        milestones: [
-                            { name: "Database Schema Finalization", owner: leadName, ownerAvatar: leadAvatar, status: "Completed", priority: "High" },
-                            { name: "API Route Security & CORS", owner: membersList[0]?.name || leadName, ownerAvatar: leadAvatar, status: "In Progress", priority: "High" }
-                        ],
-                        teamLeaderObj: leadObj ? {
-                            name: leadName,
-                            role: leadRole,
-                            email: leadObj.email,
-                            employeeId: leadObj.employeeId,
-                            avatar: leadAvatar,
-                            initials: leadName.substring(0, 2).toUpperCase()
-                        } : null,
-                        membersList: membersList,
-                        activity: [
-                            { title: "Project Loaded from MongoDB", desc: `Team Leader: ${leadName} • ${membersList.length} Working Members assigned.`, time: "Live Database Record" }
-                        ]
-                    });
+                const userRes = await userService.getUsers().catch(() => null);
+                if (userRes?.users && Array.isArray(userRes.users)) {
+                    const allUsers = userRes.users;
+                    const leaders = allUsers.filter(u => ["team_leader", "team_lead"].includes(u.role));
+                    setDbTeamLeaders(leaders);
+                    const staff = allUsers.filter(u => u.role === "employee");
+                    setDbEmployees(staff);
                 }
             } catch (err) {
-                console.warn("Project details fetch info:", err.message);
-            } finally {
-                setIsLoading(false);
+                console.warn("User list fetch notice:", err.message);
             }
         }
+        fetchUsersList();
+    }, []);
 
+    // Load Live Project from MongoDB
+    async function fetchProjectDetails() {
+        setIsLoading(true);
+        try {
+            let raw = null;
+            try {
+                const res = await projectService.getProjectById(projectId);
+                if (res && res.project) raw = res.project;
+            } catch (e) {
+                // Fallback search
+            }
+
+            if (!raw) {
+                const listRes = await projectService.getProjects();
+                if (listRes?.projects) {
+                    raw = listRes.projects.find(p => p._id === projectId || p.id === projectId);
+                }
+            }
+
+            if (raw) {
+                const leadObj = typeof raw.teamLeader === "object" ? raw.teamLeader : null;
+                const leadId = leadObj ? leadObj._id : (typeof raw.teamLeader === "string" ? raw.teamLeader : "");
+                const leadName = leadObj ? (leadObj.name || leadObj.email) : "Unassigned Team Leader";
+                const leadRole = leadObj ? (leadObj.designation || (leadObj.role ? leadObj.role.toUpperCase() : "Team Leader")) : "Team Leader";
+                const leadAvatar = leadObj?.avatarUrl || "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80";
+
+                const rawMembers = Array.isArray(raw.members)
+                    ? raw.members.map(m => (typeof m === "object" ? m._id : m))
+                    : [];
+
+                const membersList = Array.isArray(raw.members)
+                    ? raw.members.map(m => {
+                        if (typeof m === "object" && m) {
+                            return {
+                                id: m._id,
+                                name: m.name || m.email,
+                                role: m.designation || (m.role ? m.role.toUpperCase() : "Employee"),
+                                email: m.email,
+                                employeeId: m.employeeId || "",
+                                avatar: m.avatarUrl || null,
+                                initials: m.name ? m.name.substring(0, 2).toUpperCase() : "EM"
+                            };
+                        }
+                        return null;
+                    }).filter(Boolean)
+                    : [];
+
+                const numRev = Number(raw.revenue) || Number(raw.budget) || 50000;
+                const numExp = Number(raw.expenses) || 0;
+                const numPaid = Number(raw.paidAmount) || 0;
+                const numPending = raw.pendingAmount !== undefined ? Number(raw.pendingAmount) : Math.max(0, numRev - numPaid);
+
+                let pStatus = raw.paymentStatus;
+                if (!pStatus) {
+                    if (numPaid >= numRev && numRev > 0) pStatus = "Paid";
+                    else if (numPaid > 0) pStatus = "Partial";
+                    else pStatus = "Pending";
+                }
+
+                const startDateFormatted = raw.startDate
+                    ? new Date(raw.startDate).toLocaleDateString()
+                    : (raw.createdAt ? new Date(raw.createdAt).toLocaleDateString() : "N/A");
+
+                const endDateFormatted = raw.endDate
+                    ? new Date(raw.endDate).toLocaleDateString()
+                    : (raw.dueDate ? new Date(raw.dueDate).toLocaleDateString() : "Dec 2026");
+
+                setDbProject({
+                    id: raw._id || raw.id,
+                    title: raw.title || "Project Initiative",
+                    client: typeof raw.client === "object" ? (raw.client.company || raw.client.name) : "Client Enterprise",
+                    lead: leadName,
+                    leadRole: leadRole,
+                    leadAvatar: leadAvatar,
+                    teamLeaderId: leadId,
+                    rawStatus: raw.status || "planning",
+                    rawStartDate: raw.startDate || raw.createdAt,
+                    rawDueDate: raw.dueDate || raw.endDate,
+                    rawMembers: rawMembers,
+                    status: raw.status ? (raw.status.charAt(0).toUpperCase() + raw.status.slice(1)) : "In Progress",
+                    statusType: raw.status === "completed" ? "green" : raw.status === "delayed" ? "red" : "blue",
+                    progress: raw.status === "completed" ? 100 : 65,
+                    startDate: startDateFormatted,
+                    endDate: endDateFormatted,
+                    dueDate: endDateFormatted,
+                    description: raw.description || "Core enterprise software engineering workflow and infrastructure implementation.",
+                    priority: "High - Tier 1",
+                    revenue: numRev,
+                    expenses: numExp,
+                    paidAmount: numPaid,
+                    pendingAmount: numPending,
+                    paymentStatus: pStatus,
+                    teamLeaderObj: leadObj ? {
+                        name: leadName,
+                        role: leadRole,
+                        email: leadObj.email,
+                        employeeId: leadObj.employeeId,
+                        avatar: leadAvatar,
+                        initials: leadName.substring(0, 2).toUpperCase()
+                    } : null,
+                    membersList: membersList,
+                    activity: [
+                        { title: "Project Loaded from MongoDB", desc: `Team Leader: ${leadName} • ${membersList.length} Working Members assigned.`, time: "Live Database Record" }
+                    ]
+                });
+
+                setExpensesInput(numExp.toString());
+                setPaidAmountInput(numPaid.toString());
+            }
+        } catch (err) {
+            console.warn("Project details fetch info:", err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
+    useEffect(() => {
         fetchProjectDetails();
     }, [projectId]);
+
+    const openEditModal = () => {
+        if (!dbProject) return;
+        setMemberLimitWarning("");
+        setEditErrorMessage("");
+
+        const formatISO = (dateStr) => {
+            if (!dateStr) return "";
+            try {
+                return new Date(dateStr).toISOString().split("T")[0];
+            } catch (e) {
+                return "";
+            }
+        };
+
+        setEditFormData({
+            title: dbProject.title || "",
+            description: dbProject.description || "",
+            status: dbProject.rawStatus || "planning",
+            startDate: formatISO(dbProject.rawStartDate) || new Date().toISOString().split("T")[0],
+            dueDate: formatISO(dbProject.rawDueDate) || "",
+            revenue: dbProject.revenue ? dbProject.revenue.toString() : "50000",
+            teamLeaderId: dbProject.teamLeaderId || (dbTeamLeaders[0] ? dbTeamLeaders[0]._id : ""),
+            selectedMembers: dbProject.rawMembers || []
+        });
+        setIsEditModalOpen(true);
+    };
+
+    const toggleEditMemberSelection = (userId) => {
+        setMemberLimitWarning("");
+        setEditFormData(prev => {
+            const exists = prev.selectedMembers.includes(userId);
+            if (exists) {
+                return { ...prev, selectedMembers: prev.selectedMembers.filter(id => id !== userId) };
+            } else {
+                if (prev.selectedMembers.length >= 3) {
+                    setMemberLimitWarning("Maximum 3 team members allowed per project.");
+                    return prev;
+                }
+                return { ...prev, selectedMembers: [...prev.selectedMembers, userId] };
+            }
+        });
+    };
+
+    const handleSaveProjectEdits = async (e) => {
+        e.preventDefault();
+        if (!editFormData.title) return;
+        setIsUpdatingProject(true);
+        setEditErrorMessage("");
+
+        try {
+            const updatePayload = {
+                title: editFormData.title,
+                description: editFormData.description,
+                status: editFormData.status,
+                startDate: editFormData.startDate ? new Date(editFormData.startDate) : undefined,
+                dueDate: editFormData.dueDate ? new Date(editFormData.dueDate) : undefined,
+                endDate: editFormData.dueDate ? new Date(editFormData.dueDate) : undefined,
+                revenue: Number(editFormData.revenue) || 0,
+                teamLeader: editFormData.teamLeaderId || null,
+                members: editFormData.selectedMembers
+            };
+
+            await projectService.updateProject(projectId, updatePayload);
+            setIsEditModalOpen(false);
+            await fetchProjectDetails();
+        } catch (err) {
+            console.error("Project edit error:", err);
+            setEditErrorMessage(err.message || "Failed to save project edits.");
+        } finally {
+            setIsUpdatingProject(false);
+        }
+    };
+
+    const handleUpdateFinancials = async (e) => {
+        e.preventDefault();
+        setIsSavingFinancials(true);
+        setFinancialsMessage("");
+
+        const targetRev = dbProject?.revenue || 0;
+        const newPaid = Number(paidAmountInput) || 0;
+
+        if (targetRev > 0 && newPaid > targetRev) {
+            setFinancialsMessage("exceeded the pending amount");
+            setIsSavingFinancials(false);
+            return;
+        }
+
+        try {
+            const updatePayload = {
+                expenses: Number(expensesInput) || 0,
+                paidAmount: newPaid
+            };
+
+            const res = await projectService.updateProject(projectId, updatePayload);
+            const updated = res?.project || res;
+
+            if (updated) {
+                const updatedRev = Number(updated.revenue) || Number(updated.budget) || targetRev;
+                const updatedExp = Number(updated.expenses) || 0;
+                const updatedPaid = Number(updated.paidAmount) || 0;
+                const updatedPending = updated.pendingAmount !== undefined
+                    ? Number(updated.pendingAmount)
+                    : Math.max(0, updatedRev - updatedPaid);
+
+                let updatedStatus = updated.paymentStatus;
+                if (!updatedStatus) {
+                    if (updatedPaid >= updatedRev && updatedRev > 0) updatedStatus = "Paid";
+                    else if (updatedPaid > 0) updatedStatus = "Partial";
+                    else updatedStatus = "Pending";
+                }
+
+                setDbProject(prev => ({
+                    ...prev,
+                    expenses: updatedExp,
+                    paidAmount: updatedPaid,
+                    pendingAmount: updatedPending,
+                    paymentStatus: updatedStatus
+                }));
+
+                setFinancialsMessage("Financial details successfully updated in MongoDB!");
+            }
+        } catch (err) {
+            console.error("Failed to update financials:", err);
+            const msg = err.message || "";
+            if (msg.toLowerCase().includes("exceeded")) {
+                setFinancialsMessage("exceeded the pending amount");
+            } else {
+                setFinancialsMessage("Failed to update financials: " + msg);
+            }
+        } finally {
+            setIsSavingFinancials(false);
+        }
+    };
 
     const project = dbProject;
 
@@ -166,7 +379,7 @@ export default function ProjectDetailPage({ params }) {
                         <Search className="search-icon" size={18} />
                         <input
                             type="text"
-                            placeholder="Search project milestones, tasks..."
+                            placeholder="Search project details..."
                         />
                     </div>
 
@@ -215,11 +428,8 @@ export default function ProjectDetailPage({ params }) {
                                 </nav>
 
                                 <div style={{ display: "flex", gap: "12px" }}>
-                                    <button className="dashboard-btn-secondary">
-                                        <Edit size={16} /> Edit Project
-                                    </button>
-                                    <button className="dashboard-btn-primary">
-                                        <CheckCircle2 size={16} /> Complete Milestone
+                                    <button onClick={openEditModal} className="dashboard-btn-secondary">
+                                        <Edit size={16} /> Edit Project &amp; Employees
                                     </button>
                                     <button
                                         onClick={handleDeleteProject}
@@ -232,7 +442,7 @@ export default function ProjectDetailPage({ params }) {
                             </div>
 
                             {/* Title & Status Badge Header */}
-                            <div style={{ display: "flex", alignItems: "center", justifyBetween: "space-between", gap: "15px", marginBottom: "30px", flexWrap: "wrap" }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "15px", marginBottom: "30px", flexWrap: "wrap" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: "15px", flexWrap: "wrap" }}>
                                     <h1 style={{ color: "#002045", fontSize: "32px", margin: 0 }}>{project.title}</h1>
                                     <span className={`badge ${project.statusType === "green" ? "green" : project.statusType === "red" ? "yellow" : "badge"}`} style={{ padding: "6px 14px", fontSize: "13px" }}>
@@ -240,13 +450,13 @@ export default function ProjectDetailPage({ params }) {
                                     </span>
                                 </div>
                                 <div style={{ fontSize: "16px", fontWeight: "bold", color: "#002045" }}>
-                                    Contract Revenue: <span style={{ color: "#169c52" }}>{project.revenue}</span>
+                                    Contract Revenue: <span style={{ color: "#169c52" }}>₹{Number(project.revenue).toLocaleString()}</span>
                                 </div>
                             </div>
 
                             {/* Main Bento 2-Column Grid */}
                             <div className="overview-grid" style={{ gridTemplateColumns: "1.8fr 1fr", gap: "25px" }}>
-                                {/* LEFT COLUMN: Overview, Progress, Milestones */}
+                                {/* LEFT COLUMN: Overview & Financial Management */}
                                 <div style={{ display: "flex", flexDirection: "column", gap: "25px" }}>
                                     {/* Project Overview Card */}
                                     <div className="overview-card" style={{ marginTop: 0 }}>
@@ -257,10 +467,17 @@ export default function ProjectDetailPage({ params }) {
                                                     {project.description}
                                                 </p>
                                             </div>
-                                            <div style={{ background: "#f8fbff", padding: "16px 20px", borderRadius: "12px", border: "1px solid #e2e8f0", textAlign: "center", minWidth: "140px" }}>
-                                                <Calendar size={24} color="#002045" style={{ marginBottom: "4px" }} />
-                                                <span style={{ fontSize: "11px", color: "#777", textTransform: "uppercase", display: "block" }}>Target Due Date</span>
-                                                <strong style={{ fontSize: "15px", color: "#002045" }}>{project.dueDate}</strong>
+                                            <div style={{ display: "flex", gap: "12px" }}>
+                                                <div style={{ background: "#f8fbff", padding: "14px 18px", borderRadius: "12px", border: "1px solid #e2e8f0", textAlign: "center", minWidth: "120px" }}>
+                                                    <Calendar size={20} color="#002045" style={{ marginBottom: "4px" }} />
+                                                    <span style={{ fontSize: "11px", color: "#777", textTransform: "uppercase", display: "block" }}>Start Date</span>
+                                                    <strong style={{ fontSize: "14px", color: "#002045" }}>{project.startDate}</strong>
+                                                </div>
+                                                <div style={{ background: "#f8fbff", padding: "14px 18px", borderRadius: "12px", border: "1px solid #e2e8f0", textAlign: "center", minWidth: "120px" }}>
+                                                    <Calendar size={20} color="#002045" style={{ marginBottom: "4px" }} />
+                                                    <span style={{ fontSize: "11px", color: "#777", textTransform: "uppercase", display: "block" }}>Target Due Date</span>
+                                                    <strong style={{ fontSize: "14px", color: "#002045" }}>{project.endDate}</strong>
+                                                </div>
                                             </div>
                                         </div>
 
@@ -287,70 +504,96 @@ export default function ProjectDetailPage({ params }) {
                                         </div>
                                     </div>
 
-                                    {/* Development Progress Section */}
+                                    {/* Financials & Payment Management Card */}
                                     <div className="overview-card">
-                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
-                                            <h3 style={{ color: "#002045", fontSize: "20px", margin: 0 }}>Development Progress</h3>
-                                            <span style={{ fontSize: "24px", fontWeight: "bold", color: "#002045" }}>{project.progress}%</span>
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                                            <h3 style={{ color: "#002045", fontSize: "20px", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+                                                <IndianRupee size={22} color="#002045" /> Financials &amp; Payment Tracking
+                                            </h3>
+                                            <span
+                                                className={`badge ${project.paymentStatus === "Paid" ? "green" : project.paymentStatus === "Partial" ? "blue" : "yellow"}`}
+                                                style={{ fontSize: "12px", padding: "6px 14px", fontWeight: "bold" }}
+                                            >
+                                                Payment Status: {project.paymentStatus}
+                                            </span>
                                         </div>
 
-                                        <div className="progress" style={{ height: "14px", borderRadius: "8px", marginBottom: "20px" }}>
-                                            <div
-                                                className="progress-fill employee-progress"
-                                                style={{ width: `${project.progress}%`, background: project.statusType === "green" ? "#169c52" : "#002045" }}
-                                            ></div>
+                                        {/* Financial Summary Grid */}
+                                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "15px", marginBottom: "25px" }}>
+                                            <div style={{ background: "#f8fbff", padding: "16px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
+                                                <span style={{ fontSize: "12px", color: "#777", textTransform: "uppercase", display: "block", marginBottom: "4px" }}>Contract Revenue</span>
+                                                <strong style={{ fontSize: "18px", color: "#002045" }}>₹{Number(project.revenue).toLocaleString()}</strong>
+                                            </div>
+                                            <div style={{ background: "#fff5f5", padding: "16px", borderRadius: "12px", border: "1px solid #fed7d7" }}>
+                                                <span style={{ fontSize: "12px", color: "#c53030", textTransform: "uppercase", display: "block", marginBottom: "4px" }}>Expenses</span>
+                                                <strong style={{ fontSize: "18px", color: "#c53030" }}>₹{Number(project.expenses).toLocaleString()}</strong>
+                                            </div>
+                                            <div style={{ background: "#f0fff4", padding: "16px", borderRadius: "12px", border: "1px solid #c6f6d5" }}>
+                                                <span style={{ fontSize: "12px", color: "#22543d", textTransform: "uppercase", display: "block", marginBottom: "4px" }}>Paid Amount</span>
+                                                <strong style={{ fontSize: "18px", color: "#276749" }}>₹{Number(project.paidAmount).toLocaleString()}</strong>
+                                            </div>
+                                            <div style={{ background: "#fffaf0", padding: "16px", borderRadius: "12px", border: "1px solid #feebc8" }}>
+                                                <span style={{ fontSize: "12px", color: "#9c4221", textTransform: "uppercase", display: "block", marginBottom: "4px" }}>Pending Amount</span>
+                                                <strong style={{ fontSize: "18px", color: "#dd6b20" }}>₹{Number(project.pendingAmount).toLocaleString()}</strong>
+                                            </div>
                                         </div>
 
-                                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "15px" }}>
-                                            {project.subProgress?.map((sub, idx) => (
-                                                <div key={idx} style={{ background: "#f8fbff", padding: "14px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
-                                                    <span style={{ fontSize: "12px", color: "#777", display: "block", marginBottom: "4px" }}>{sub.title}</span>
-                                                    <strong style={{ fontSize: "15px", color: "#002045" }}>{sub.status} ({sub.percent}%)</strong>
+                                        {/* Financial Update Form */}
+                                        <form onSubmit={handleUpdateFinancials} style={{ background: "#f8fafc", padding: "20px", borderRadius: "12px", border: "1px solid #cbd5e1" }}>
+                                            <h4 style={{ color: "#002045", margin: "0 0 15px 0", fontSize: "15px", display: "flex", alignItems: "center", gap: "6px" }}>
+                                                <CreditCard size={16} /> Update Project Financials &amp; Payments
+                                            </h4>
+                                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", marginBottom: "15px" }}>
+                                                <div>
+                                                    <label style={{ display: "block", fontSize: "13px", color: "#444", marginBottom: "6px", fontWeight: "bold" }}>Total Expenses (₹ INR)</label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        value={expensesInput}
+                                                        onChange={(e) => setExpensesInput(e.target.value)}
+                                                        placeholder="e.g. 15000"
+                                                        style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px", outline: "none", background: "#fff" }}
+                                                    />
                                                 </div>
-                                            ))}
-                                        </div>
-                                    </div>
+                                                <div>
+                                                    <label style={{ display: "block", fontSize: "13px", color: "#444", marginBottom: "6px", fontWeight: "bold" }}>Paid Amount (₹ INR)</label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        value={paidAmountInput}
+                                                        onChange={(e) => setPaidAmountInput(e.target.value)}
+                                                        placeholder="e.g. 25000"
+                                                        style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px", outline: "none", background: "#fff" }}
+                                                    />
+                                                </div>
+                                            </div>
 
-                                    {/* Key Milestones & Tasks Table */}
-                                    <div className="dashboard-table-container" style={{ marginTop: 0 }}>
-                                        <div className="dashboard-table-header">
-                                            <h3>Key Milestones &amp; Tasks</h3>
-                                            <button className="dashboard-btn-secondary" style={{ padding: "8px 14px", fontSize: "12px" }}>
-                                                <Plus size={14} /> Add Milestone
+                                            {financialsMessage && (
+                                                <div
+                                                    style={{
+                                                        marginBottom: "15px",
+                                                        fontSize: "13px",
+                                                        fontWeight: 700,
+                                                        color: (financialsMessage.toLowerCase().includes("exceeded") || financialsMessage.toLowerCase().includes("failed") || financialsMessage.toLowerCase().includes("error")) ? "#d63031" : "#169c52",
+                                                        background: (financialsMessage.toLowerCase().includes("exceeded") || financialsMessage.toLowerCase().includes("failed") || financialsMessage.toLowerCase().includes("error")) ? "#ffeaea" : "#eefbf3",
+                                                        padding: "10px 14px",
+                                                        borderRadius: "8px",
+                                                        border: `1px solid ${(financialsMessage.toLowerCase().includes("exceeded") || financialsMessage.toLowerCase().includes("failed") || financialsMessage.toLowerCase().includes("error")) ? "#fecaca" : "#bbf7d0"}`
+                                                    }}
+                                                >
+                                                    {financialsMessage}
+                                                </div>
+                                            )}
+
+                                            <button
+                                                type="submit"
+                                                disabled={isSavingFinancials}
+                                                className="dashboard-btn-primary"
+                                                style={{ width: "100%", justifyContent: "center" }}
+                                            >
+                                                {isSavingFinancials ? "Updating MongoDB..." : "Save Financial Update"}
                                             </button>
-                                        </div>
-
-                                        <table className="dashboard-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>Task / Milestone</th>
-                                                    <th>Owner</th>
-                                                    <th>Status</th>
-                                                    <th>Priority</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {project.milestones?.map((m, idx) => (
-                                                    <tr key={idx}>
-                                                        <td style={{ fontWeight: "bold", color: "#002045" }}>{m.name}</td>
-                                                        <td>
-                                                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                                                <img src={m.ownerAvatar} alt={m.owner} style={{ width: "24px", height: "24px", borderRadius: "50%", objectFit: "cover" }} />
-                                                                <span style={{ fontSize: "13px", color: "#333" }}>{m.owner}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td>
-                                                            <span className={`badge ${m.status === "Completed" ? "green" : "blue"}`}>
-                                                                {m.status}
-                                                            </span>
-                                                        </td>
-                                                        <td>
-                                                            <strong style={{ fontSize: "12px", color: m.priority === "High" ? "#d63031" : "#002045" }}>{m.priority}</strong>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
+                                        </form>
                                     </div>
                                 </div>
 
@@ -439,6 +682,254 @@ export default function ProjectDetailPage({ params }) {
                     )}
                 </div>
             </div>
+
+            {/* EDIT PROJECT MODAL (CEO / Manager Project & Employee Management) */}
+            {isEditModalOpen && (
+                <div style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: "rgba(0, 32, 69, 0.65)",
+                    backdropFilter: "blur(5px)",
+                    zIndex: 9999,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "20px"
+                }}>
+                    <div style={{
+                        background: "#fff",
+                        borderRadius: "16px",
+                        width: "100%",
+                        maxWidth: "750px",
+                        maxHeight: "90vh",
+                        overflowY: "auto",
+                        boxShadow: "0 25px 60px rgba(0,0,0,0.35)",
+                        border: "1px solid #cbd5e1"
+                    }}>
+                        {/* Header */}
+                        <div style={{
+                            padding: "20px 25px",
+                            borderBottom: "1px solid #e2e8f0",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            background: "#f8fafc"
+                        }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                <Edit size={20} color="#002045" />
+                                <h2 style={{ margin: 0, color: "#002045", fontSize: "20px" }}>Edit Project &amp; Add Employees</h2>
+                            </div>
+                            <button
+                                onClick={() => setIsEditModalOpen(false)}
+                                style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}
+                            >
+                                <X size={22} />
+                            </button>
+                        </div>
+
+                        {/* Modal Body Form */}
+                        <form onSubmit={handleSaveProjectEdits} style={{ padding: "25px" }}>
+                            {editErrorMessage && (
+                                <div style={{ background: "#ffeaea", color: "#d63031", padding: "12px 16px", borderRadius: "8px", fontSize: "13px", fontWeight: 600, marginBottom: "20px" }}>
+                                    {editErrorMessage}
+                                </div>
+                            )}
+
+                            <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+                                {/* Title */}
+                                <div>
+                                    <label style={{ display: "block", fontSize: "13px", color: "#334155", fontWeight: "bold", marginBottom: "6px" }}>Project Title *</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={editFormData.title}
+                                        onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+                                        style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px", outline: "none", background: "#fff" }}
+                                    />
+                                </div>
+
+                                {/* Description */}
+                                <div>
+                                    <label style={{ display: "block", fontSize: "13px", color: "#334155", fontWeight: "bold", marginBottom: "6px" }}>Project Description</label>
+                                    <textarea
+                                        rows={3}
+                                        value={editFormData.description}
+                                        onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                                        style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px", outline: "none", background: "#fff" }}
+                                    ></textarea>
+                                </div>
+
+                                {/* Status & Revenue Grid */}
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "13px", color: "#334155", fontWeight: "bold", marginBottom: "6px" }}>Project Status</label>
+                                        <select
+                                            value={editFormData.status}
+                                            onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                                            style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px", outline: "none", background: "#fff" }}
+                                        >
+                                            <option value="planning">Planning</option>
+                                            <option value="in_progress">In Progress</option>
+                                            <option value="on_hold">On Hold</option>
+                                            <option value="completed">Completed</option>
+                                            <option value="cancelled">Cancelled</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "13px", color: "#334155", fontWeight: "bold", marginBottom: "6px" }}>Contract Revenue (₹ INR)</label>
+                                        <input
+                                            type="number"
+                                            value={editFormData.revenue}
+                                            onChange={(e) => setEditFormData({ ...editFormData, revenue: e.target.value })}
+                                            style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px", outline: "none", background: "#fff" }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Dates Grid */}
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "13px", color: "#334155", fontWeight: "bold", marginBottom: "6px" }}>Start Date</label>
+                                        <input
+                                            type="date"
+                                            value={editFormData.startDate}
+                                            onChange={(e) => setEditFormData({ ...editFormData, startDate: e.target.value })}
+                                            style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px", outline: "none", background: "#fff" }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "13px", color: "#334155", fontWeight: "bold", marginBottom: "6px" }}>Target Due Date</label>
+                                        <input
+                                            type="date"
+                                            value={editFormData.dueDate}
+                                            onChange={(e) => setEditFormData({ ...editFormData, dueDate: e.target.value })}
+                                            style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px", outline: "none", background: "#fff" }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Team Leader Selection */}
+                                <div>
+                                    <label style={{ display: "block", fontSize: "13px", color: "#334155", fontWeight: "bold", marginBottom: "6px" }}>Assign Team Leader</label>
+                                    <select
+                                        value={editFormData.teamLeaderId}
+                                        onChange={(e) => setEditFormData({ ...editFormData, teamLeaderId: e.target.value })}
+                                        style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px", outline: "none", background: "#fff" }}
+                                    >
+                                        <option value="">Unassigned Team Leader</option>
+                                        {dbTeamLeaders.map(l => (
+                                            <option key={l._id} value={l._id}>
+                                                {l.name} ({l.email})
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Add / Edit Team Employees (Max 3 Members) */}
+                                <div>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                                        <label style={{ fontSize: "13px", color: "#334155", fontWeight: "bold", margin: 0, display: "flex", alignItems: "center", gap: "6px" }}>
+                                            <UserCheck size={16} color="#002045" /> Assign / Add Team Employees (Max 3 Members)
+                                        </label>
+                                        <span style={{ fontSize: "12px", fontWeight: "bold", color: editFormData.selectedMembers.length >= 3 ? "#d63031" : "#002045" }}>
+                                            Selected: {editFormData.selectedMembers.length} / 3 Max Members
+                                        </span>
+                                    </div>
+
+                                    {memberLimitWarning && (
+                                        <div style={{ background: "#ffeaea", color: "#d63031", padding: "8px 12px", borderRadius: "6px", fontSize: "12px", fontWeight: 600, marginBottom: "10px" }}>
+                                            {memberLimitWarning}
+                                        </div>
+                                    )}
+
+                                    <div style={{ background: "#fff", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "8px 12px", marginBottom: "10px", display: "flex", alignItems: "center" }}>
+                                        <Search size={16} color="#002045" style={{ marginRight: "8px" }} />
+                                        <input
+                                            type="text"
+                                            value={employeeSearchQuery}
+                                            onChange={(e) => setEmployeeSearchQuery(e.target.value)}
+                                            placeholder="Search employees to add by name, email or employee ID..."
+                                            style={{ border: "none", outline: "none", width: "100%", fontSize: "13px" }}
+                                        />
+                                    </div>
+
+                                    <div style={{ background: "#fff", border: "1px solid #cbd5e1", borderRadius: "8px", maxHeight: "200px", overflowY: "auto" }}>
+                                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                                            <tbody>
+                                                {dbEmployees.length === 0 ? (
+                                                    <tr>
+                                                        <td colSpan={3} style={{ padding: "15px", textAlign: "center", color: "#777" }}>
+                                                            Loading employees from database collection...
+                                                        </td>
+                                                    </tr>
+                                                ) : dbEmployees
+                                                    .filter(emp => {
+                                                        const q = employeeSearchQuery.toLowerCase();
+                                                        return !q || (emp.name && emp.name.toLowerCase().includes(q)) || (emp.email && emp.email.toLowerCase().includes(q)) || (emp.employeeId && emp.employeeId.toLowerCase().includes(q));
+                                                    })
+                                                    .map(emp => {
+                                                        const isChecked = editFormData.selectedMembers.includes(emp._id);
+                                                        const isMaxReached = !isChecked && editFormData.selectedMembers.length >= 3;
+                                                        return (
+                                                            <tr
+                                                                key={emp._id}
+                                                                onClick={() => toggleEditMemberSelection(emp._id)}
+                                                                style={{
+                                                                    cursor: isMaxReached ? "not-allowed" : "pointer",
+                                                                    background: isChecked ? "#eef4ff" : "#fff",
+                                                                    borderBottom: "1px solid #f1f5f9"
+                                                                }}
+                                                            >
+                                                                <td style={{ padding: "10px 12px", width: "35px" }}>
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={isChecked}
+                                                                        disabled={isMaxReached}
+                                                                        onChange={() => { }}
+                                                                    />
+                                                                </td>
+                                                                <td style={{ padding: "10px 12px" }}>
+                                                                    <strong style={{ color: "#002045", display: "block" }}>{emp.name}</strong>
+                                                                    <span style={{ fontSize: "11px", color: "#64748b" }}>{emp.email} ({emp.employeeId || "EM"})</span>
+                                                                </td>
+                                                                <td style={{ padding: "10px 12px", textAlign: "right" }}>
+                                                                    <span className={`badge ${isChecked ? "green" : "gray"}`} style={{ fontSize: "10px" }}>
+                                                                        {isChecked ? "ASSIGNED" : isMaxReached ? "MAX REACHED" : "AVAILABLE"}
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Modal Footer Actions */}
+                            <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "25px", paddingTop: "15px", borderTop: "1px solid #e2e8f0" }}>
+                                <button
+                                    type="button"
+                                    className="dashboard-btn-secondary"
+                                    onClick={() => setIsEditModalOpen(false)}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isUpdatingProject}
+                                    className="dashboard-btn-primary"
+                                >
+                                    {isUpdatingProject ? "Saving Changes..." : "Save Project & Employee Changes"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

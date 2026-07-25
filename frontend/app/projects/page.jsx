@@ -6,6 +6,7 @@ import "../dashboard/dashboard.css";
 import Sidebar from "@/components/Sidebar";
 import { projectService } from "../../services/projectService";
 import { clientService } from "../../services/clientService";
+import api from "@/lib/api";
 import {
     LayoutDashboard,
     Users,
@@ -18,6 +19,7 @@ import {
     LogOut,
     Search,
     Bell,
+    CircleHelp,
     Mail,
     Plus,
     Calendar,
@@ -33,6 +35,7 @@ export default function ProjectsPage() {
     const [selectedCategory, setSelectedCategory] = useState("active");
     const [searchQuery, setSearchQuery] = useState("");
     const [isLoading, setIsLoading] = useState(true);
+    const [user, setUser] = useState(null);
 
     // Live MongoDB Projects state
     const [projects, setProjects] = useState([]);
@@ -42,6 +45,11 @@ export default function ProjectsPage() {
         async function fetchDbProjects() {
             setIsLoading(true);
             try {
+                // Fetch logged-in user info
+                api.get("/auth/me").then(res => {
+                    if (res?.data?.user) setUser(res.data.user);
+                }).catch(() => null);
+
                 // Fetch clients map first
                 const clientMap = {};
                 const clientRes = await clientService.getClients().catch(() => null);
@@ -123,8 +131,6 @@ export default function ProjectsPage() {
         return matchesCategory && matchesSearch;
     });
 
-    const starredProjects = projects.filter(p => p.starred);
-
     return (
         <div className="dashboard-container">
             {/* Sidebar */}
@@ -145,19 +151,31 @@ export default function ProjectsPage() {
                     </div>
 
                     <div className="header-right">
-                        <Bell className="icons" />
-                        <Mail className="icons" />
-
-                        <div className="profile">
-                            <img
-                                src="https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&auto=format&fit=crop&q=80"
-                                alt="Alex Mercer"
-                            />
-                            <div>
-                                <h4>Alex Mercer</h4>
-                                <span>CEO &amp; Product Head</span>
-                            </div>
+                        <div className="icons">
+                            <Bell size={20} />
                         </div>
+
+                        <div className="icons">
+                            <CircleHelp size={20} />
+                        </div>
+
+                        <Link href="/profile">
+                            <div className="profile" style={{ cursor: "pointer" }}>
+                                <div className="profile-text">
+                                    <h4>{user?.name || "User"}</h4>
+                                    <span>{user?.role?.toUpperCase() || "ADMINISTRATOR"}</span>
+                                </div>
+                                <img
+                                    src={
+                                        user?.avatarUrl ||
+                                        `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                            user?.name || "User"
+                                        )}`
+                                    }
+                                    alt={user?.name || "Profile"}
+                                />
+                            </div>
+                        </Link>
                     </div>
                 </header>
 
@@ -199,24 +217,6 @@ export default function ProjectsPage() {
                                         </span>
                                     </div>
                                 </li>
-                            </ul>
-                        </div>
-
-                        <div>
-                            <h3>Important Projects</h3>
-                            <ul className="secondary-nav-list">
-                                {starredProjects.map(p => (
-                                    <li key={p.id}>
-                                        <div className="secondary-nav-item">
-                                            <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                                                <Star size={16} fill="#f4c430" stroke="#f4c430" />
-                                                <span style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap", maxWidth: "160px" }}>
-                                                    {p.title}
-                                                </span>
-                                            </span>
-                                        </div>
-                                    </li>
-                                ))}
                             </ul>
                         </div>
                     </aside>

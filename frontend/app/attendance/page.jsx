@@ -43,9 +43,15 @@ export default function AttendancePage() {
 
     const [leaveRequests, setLeaveRequests] = useState([]);
 
+    const [user, setUser] = useState(null);
+
     const fetchAttendanceData = async () => {
         try {
             setLoading(true);
+            api.get("/auth/me").then(res => {
+                if (res?.data?.user) setUser(res.data.user);
+            }).catch(() => null);
+
             const [summaryRes, leaveRes] = await Promise.all([
                 api.get("/attendance/summary").catch(err => {
                     console.warn("Failed to fetch attendance summary", err);
@@ -165,19 +171,31 @@ export default function AttendancePage() {
                     </div>
 
                     <div className="header-right">
-                        <Bell className="icons" />
-                        <CircleHelp className="icons" />
-
-                        <div className="profile">
-                            <img
-                                src="https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&auto=format&fit=crop&q=80"
-                                alt="Admin User"
-                            />
-                            <div>
-                                <h4>Admin Dashboard</h4>
-                                <span>Executive Management</span>
-                            </div>
+                        <div className="icons">
+                            <Bell size={20} />
                         </div>
+
+                        <div className="icons">
+                            <CircleHelp size={20} />
+                        </div>
+
+                        <Link href="/profile">
+                            <div className="profile" style={{ cursor: "pointer" }}>
+                                <div className="profile-text">
+                                    <h4>{user?.name || "User"}</h4>
+                                    <span>{user?.role?.toUpperCase() || "ADMINISTRATOR"}</span>
+                                </div>
+                                <img
+                                    src={
+                                        user?.avatarUrl ||
+                                        `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                            user?.name || "User"
+                                        )}`
+                                    }
+                                    alt={user?.name || "Profile"}
+                                />
+                            </div>
+                        </Link>
                     </div>
                 </header>
 

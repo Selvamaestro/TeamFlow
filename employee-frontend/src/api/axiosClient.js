@@ -22,6 +22,11 @@ export function setAuthToken(token) {
   inMemoryToken = token;
 }
 
+// Socket.IO auth needs the raw token too (it can't read the httpOnly cookie).
+export function getAuthToken() {
+  return inMemoryToken;
+}
+
 axiosClient.interceptors.request.use((config) => {
   if (inMemoryToken) {
     config.headers.Authorization = `Bearer ${inMemoryToken}`;

@@ -102,11 +102,22 @@ async function addDocument(req, res, next) {
   }
 }
 
+// DELETE /projects/:id (Manager, CEO, HR)
+async function deleteProject(req, res, next) {
+  try {
+    await projectService.deleteProject(req.project);
+    return res.status(200).json({ message: "Project deleted successfully" });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   listProjects,
   getProject,
   createProject,
   updateProject,
+  deleteProject,
   addMembers,
   removeMember,
   setTeamLeader,

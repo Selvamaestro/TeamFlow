@@ -8,6 +8,12 @@ export function listProjectTasks(projectId, params = {}) {
     .then((res) => res.data.tasks);
 }
 
+// POST /api/projects/:projectId/tasks -> { task }
+// Team Leader of the project (or Manager/CEO). Body: { title, description, assignedTo, dueDate, priority }
+export function createTask(projectId, data) {
+  return axiosClient.post(`/projects/${projectId}/tasks`, data).then((res) => res.data.task);
+}
+
 // GET /api/tasks/:id -> { task }
 export function getTask(id) {
   return axiosClient.get(`/tasks/${id}`).then((res) => res.data.task);

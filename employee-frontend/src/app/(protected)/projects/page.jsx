@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import EmployeeLayout from "../../../components/EmployeeLayout";
 import ProjectProgressCard from "../../../components/ProjectProgressCard";
 import * as projectApi from "../../../api/project.api";
@@ -8,6 +9,7 @@ import * as taskApi from "../../../api/task.api";
 import { formatDate } from "../../../utils/formatDate";
 
 export default function ProjectsPage() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [projects, setProjects] = useState([]);
@@ -72,12 +74,20 @@ export default function ProjectsPage() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-12 gap-gutter">
                 {currentProjects.map((project) => (
-                  <ProjectProgressCard
+                  <div
                     key={project._id}
-                    project={project}
-                    progress={projectStats[project._id]?.progress ?? 0}
-                    taskCount={projectStats[project._id]?.taskCount ?? 0}
-                  />
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => router.push(`/projects/${project._id}`)}
+                    onKeyDown={(e) => e.key === "Enter" && router.push(`/projects/${project._id}`)}
+                    className="cursor-pointer md:col-span-6"
+                  >
+                    <ProjectProgressCard
+                      project={project}
+                      progress={projectStats[project._id]?.progress ?? 0}
+                      taskCount={projectStats[project._id]?.taskCount ?? 0}
+                    />
+                  </div>
                 ))}
               </div>
             )}
@@ -104,7 +114,11 @@ export default function ProjectsPage() {
                     </thead>
                     <tbody className="divide-y divide-outline-variant">
                       {completedProjects.map((project) => (
-                        <tr key={project._id} className="hover:bg-surface-container-low transition-colors">
+                        <tr
+                          key={project._id}
+                          onClick={() => router.push(`/projects/${project._id}`)}
+                          className="hover:bg-surface-container-low transition-colors cursor-pointer"
+                        >
                           <td className="px-6 py-5">
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 rounded bg-secondary-container flex items-center justify-center text-on-secondary-container">

@@ -1,3 +1,7 @@
+"use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import api from "@/lib/api";
 import "./add.css";
 import "../../dashboard/dashboard.css";
 import Link from "next/link";
@@ -9,319 +13,412 @@ import {
 } from "lucide-react";
 
 export default function AddEmployee() {
+
+    const router = useRouter();
+
+    const [formData, setFormData] = useState({
+        name: "",
+        email: "",
+        password: "",
+        phone: "",
+        department: "",
+        designation: "",
+        role: "employee",
+        employmentType: "full_time",
+        joiningDate: "",
+        reportingManager: "",
+    });
+
+    const handleChange = (e) => {
+
+        const { name, value } = e.target;
+
+        setFormData((prev) => ({
+            ...prev,
+            [name]: value,
+        }));
+
+    };
+    const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+
+        const payload = { ...formData };
+
+        if (!payload.reportingManager) {
+            delete payload.reportingManager;
+        }
+
+        const response = await api.post("/users", payload);
+
+        alert("Employee created successfully!");
+
+        router.push("/employees");
+
+    } catch (error) {
+
+        console.error(error.response?.data);
+
+        alert(
+            error.response?.data?.message ||
+            "Failed to create employee."
+        );
+
+    }
+};
+
+
     return (
         <div className="dashboard-container">
             <Sidebar active="employees" />
             <div className="add-page">
 
-            {/* Breadcrumb */}
+                {/* Breadcrumb */}
 
-            <div className="page-header">
+                <div className="page-header">
 
-                <Link href="/employees" className="back-link">
-                    <ArrowLeft size={16} />
-                    Employees
-                </Link>
+                    <Link href="/employees" className="back-link">
+                        <ArrowLeft size={16} />
+                        Employees
+                    </Link>
 
-                <span>/</span>
+                    <span>/</span>
 
-                <h3>Add New Employee</h3>
-
-            </div>
-
-            {/* Registration Card */}
-
-            <div className="register-card">
-
-                <div className="card-top">
-
-                    <div>
-
-                        <h2>Employee Registration</h2>
-
-                        <p>
-                            Fill in the details to onboard a new team member.
-                        </p>
-
-                    </div>
-
-                    <div className="step-badge">
-                        STEP 1 OF 1
-                    </div>
+                    <h3>Add New Employee</h3>
 
                 </div>
 
-                {/* ================= BASIC INFORMATION ================= */}
+                {/* Registration Card */}
 
-                <div className="section">
+                <form
+                    className="register-card"
+                    onSubmit={handleSubmit}
+                >
 
-                    <div className="section-title">
+                    <div className="card-top">
 
-                        <User size={16} />
+                        <div>
 
-                        <h4>Basic Information</h4>
+                            <h2>Employee Registration</h2>
+
+                            <p>
+                                Fill in the details to onboard a new team member.
+                            </p>
+
+                        </div>
+
+                        <div className="step-badge">
+                            STEP 1 OF 1
+                        </div>
 
                     </div>
 
-                    <div className="form-grid">
+                    {/* ================= BASIC INFORMATION ================= */}
 
-                        {/* Full Name */}
+                    <div className="section">
 
-                        <div className="form-group">
+                        <div className="section-title">
 
-                            <label>Full Name</label>
+                            <User size={16} />
 
-                            <input
-                                type="text"
-                                placeholder="e.g. Jonathan Doe"
-                            />
+                            <h4>Basic Information</h4>
 
                         </div>
 
-                        {/* Email */}
+                        <div className="form-grid">
 
-                        <div className="form-group">
+                            {/* Full Name */}
 
-                            <label>Email Address</label>
+                            <div className="form-group">
 
-                            <input
-                                type="email"
-                                placeholder="j.doe@corporate.com"
-                            />
-
-                        </div>
-
-                        {/* Password */}
-
-                        <div className="form-group">
-
-                            <label>Password</label>
-
-                            <div className="password-field">
+                                <label>Full Name</label>
 
                                 <input
-                                    type="password"
-                                    placeholder="••••••••"
+                                    type="text"
+                                    name="name"
+                                    value={formData.name}
+                                    onChange={handleChange}
+                                    placeholder="e.g. Jonathan Doe"
                                 />
 
-                                <button
-                                    type="button"
-                                    className="eye-btn"
-                                >
-                                    👁
-                                </button>
+                            </div>
+
+                            {/* Email */}
+
+                            <div className="form-group">
+
+                                <label>Email Address</label>
+
+                                <input
+                                    type="email"
+                                    name="email"
+                                    value={formData.email}
+                                    onChange={handleChange}
+                                    placeholder="j.doe@corporate.com"
+                                />
+
+                            </div>
+
+                            {/* Password */}
+
+                            <div className="form-group">
+
+                                <label>Password</label>
+
+                                <div className="password-field">
+
+                                    <input
+                                        type="password"
+                                        name="password"
+                                        value={formData.password}
+                                        onChange={handleChange}
+                                        placeholder="••••••••"
+                                    />
+
+                                    <button
+                                        type="button"
+                                        className="eye-btn"
+                                    >
+                                        👁
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                            {/* Phone */}
+
+                            <div className="form-group">
+
+                                <label>Phone Number</label>
+
+                                <input
+                                    type="text"
+                                    name="phone"
+                                    value={formData.phone}
+                                    onChange={handleChange}
+                                    placeholder="+1 (555) 000-0000"
+                                />
 
                             </div>
 
                         </div>
 
-                        {/* Phone */}
+                    </div>
+                    {/* ================= JOB DETAILS ================= */}
 
-                        <div className="form-group">
+                    <div className="section">
 
-                            <label>Phone Number</label>
+                        <div className="section-title">
 
-                            <input
-                                type="text"
-                                placeholder="+1 (555) 000-0000"
-                            />
+                            <Briefcase size={16} />
+
+                            <h4>Job Details</h4>
+
+                        </div>
+
+                        <div className="form-grid">
+
+                            {/* Department */}
+
+                            <div className="form-group">
+
+                                <label>Department</label>
+
+                                <select
+                                    name="department"
+                                    value={formData.department}
+                                    onChange={handleChange}
+                                >
+                                    <option value="">Select Department</option>
+                                    <option value="Engineering">Engineering</option>
+                                    <option value="Human Resources">Human Resources</option>
+                                    <option value="Finance">Finance</option>
+                                    <option value="Sales">Sales</option>
+                                    <option value="Design">Design</option>
+                                </select>
+
+                            </div>
+
+                            {/* Role */}
+
+                            <div className="form-group">
+
+                                <label>Role Designation</label>
+
+                                <input
+                                    type="text"
+                                    name="designation"
+                                    value={formData.designation}
+                                    onChange={handleChange}
+                                    placeholder="e.g. Senior Frontend Dev"
+                                />
+
+                            </div>
+
+                            {/* Employee Type */}
+
+                            <div className="form-group">
+
+                                <label>Employee Type</label>
+
+                                <div className="employee-type">
+
+                                    <button
+                                        type="button"
+                                        className={formData.employmentType === "full_time" ? "active-type" : ""}
+                                        onClick={() =>
+                                            setFormData((prev) => ({
+                                                ...prev,
+                                                employmentType: "full_time",
+                                            }))
+                                        }
+                                    >
+                                        Full-Time
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className={formData.employmentType === "contract" ? "active-type" : ""}
+                                        onClick={() =>
+                                            setFormData((prev) => ({
+                                                ...prev,
+                                                employmentType: "contract",
+                                            }))
+                                        }
+                                    >
+                                        Contract
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                            {/* Join Date */}
+
+                            <div className="form-group">
+
+                                <label>Join Date</label>
+
+                                <input
+                                    type="date"
+                                    name="joiningDate"
+                                    value={formData.joiningDate}
+                                    onChange={handleChange}
+                                />
+
+                            </div>
+
+                        </div>
+
+                    </div>
+                    {/* ================= INITIAL ASSIGNMENT ================= */}
+
+                    <div className="section">
+
+                        <div className="section-title">
+
+                            <Briefcase size={16} />
+
+                            <h4>Initial Assignment</h4>
+
+                        </div>
+
+                        <div className="form-grid">
+
+                            {/* Primary Project */}
+
+                            <div className="form-group">
+
+                                <label>Primary Project</label>
+
+                                <select>
+
+                                    <option>Select Primary Project</option>
+
+                                    <option>AdminPro Mobile App</option>
+
+                                    <option>Employee Portal</option>
+
+                                    <option>CRM Dashboard</option>
+
+                                    <option>Analytics Platform</option>
+
+                                </select>
+
+                            </div>
+
+                            {/* Reward Score */}
+
+                            <div className="form-group">
+
+                                <label>Reward Score (Starting)</label>
+
+                                <input
+                                    type="number"
+                                    placeholder="100"
+                                />
+
+                                <small className="helper-text">
+                                    Initial score for performance evaluation.
+                                </small>
+
+                            </div>
 
                         </div>
 
                     </div>
 
-                </div>
-                {/* ================= JOB DETAILS ================= */}
+                    {/* ================= ACTION BUTTONS ================= */}
 
-<div className="section">
+                    <div className="form-actions">
 
-    <div className="section-title">
+                        <button
+                            type="button"
+                            className="cancel-btn"
+                            onClick={() => router.push("/employees")}
+                        >
+                            Cancel
+                        </button>
 
-        <Briefcase size={16} />
+                        <button
+                            type="submit"
+                            className="create-btn"
+                        >
+                            Create Employee
+                        </button>
 
-        <h4>Job Details</h4>
+                    </div>
 
-    </div>
+                    {/* ================= INFO BOX ================= */}
 
-    <div className="form-grid">
+                    <div className="info-box">
 
-        {/* Department */}
+                        <div className="info-icon">
 
-        <div className="form-group">
+                            ℹ
 
-            <label>Department</label>
+                        </div>
 
-            <select>
+                        <div>
 
-                <option>Select Department</option>
-                <option>Engineering</option>
-                <option>Human Resources</option>
-                <option>Finance</option>
-                <option>Sales</option>
-                <option>Design</option>
+                            <h5>Automatic Notification</h5>
 
-            </select>
+                            <p>
 
-        </div>
+                                Once you create the employee, a welcome email with login
+                                credentials and onboarding instructions will be sent automatically.
 
-        {/* Role */}
+                            </p>
 
-        <div className="form-group">
+                        </div>
 
-            <label>Role Designation</label>
-
-            <input
-                type="text"
-                placeholder="e.g. Senior Frontend Dev"
-            />
-
-        </div>
-
-        {/* Employee Type */}
-
-        <div className="form-group">
-
-            <label>Employee Type</label>
-
-            <div className="employee-type">
-
-                <button
-                    type="button"
-                    className="active-type"
-                >
-                    Full-Time
-                </button>
-
-                <button
-                    type="button"
-                >
-                    Contract
-                </button>
-
+                    </div>
+                </form>
             </div>
 
         </div>
 
-        {/* Join Date */}
-
-        <div className="form-group">
-
-            <label>Join Date</label>
-
-            <input
-                type="date"
-            />
-
-        </div>
-
-    </div>
-
-</div>
-{/* ================= INITIAL ASSIGNMENT ================= */}
-
-<div className="section">
-
-    <div className="section-title">
-
-        <Briefcase size={16} />
-
-        <h4>Initial Assignment</h4>
-
-    </div>
-
-    <div className="form-grid">
-
-        {/* Primary Project */}
-
-        <div className="form-group">
-
-            <label>Primary Project</label>
-
-            <select>
-
-                <option>Select Primary Project</option>
-
-                <option>AdminPro Mobile App</option>
-
-                <option>Employee Portal</option>
-
-                <option>CRM Dashboard</option>
-
-                <option>Analytics Platform</option>
-
-            </select>
-
-        </div>
-
-        {/* Reward Score */}
-
-        <div className="form-group">
-
-            <label>Reward Score (Starting)</label>
-
-            <input
-                type="number"
-                placeholder="100"
-            />
-
-            <small className="helper-text">
-                Initial score for performance evaluation.
-            </small>
-
-        </div>
-
-    </div>
-
-</div>
-
-{/* ================= ACTION BUTTONS ================= */}
-
-<div className="form-actions">
-
-    <button
-        type="button"
-        className="cancel-btn"
-    >
-        Cancel
-    </button>
-
-    <button
-        type="submit"
-        className="create-btn"
-    >
-        Create Employee
-    </button>
-
-</div>
-
-{/* ================= INFO BOX ================= */}
-
-<div className="info-box">
-
-    <div className="info-icon">
-
-        ℹ
-
-    </div>
-
-    <div>
-
-        <h5>Automatic Notification</h5>
-
-        <p>
-
-            Once you create the employee, a welcome email with login
-            credentials and onboarding instructions will be sent automatically.
-
-        </p>
-
-    </div>
-
-</div>
-
-            </div>
-
-        </div>
-        </div>
     );
 }

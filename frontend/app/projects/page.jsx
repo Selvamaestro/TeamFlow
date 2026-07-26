@@ -4,12 +4,14 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import "../dashboard/dashboard.css";
 import Sidebar from "@/components/Sidebar";
+import Navbar from "@/components/Navbar";
 import { projectService } from "../../services/projectService";
 import { clientService } from "../../services/clientService";
+import api from "@/lib/api";
 import {
     LayoutDashboard,
     Users,
-    DollarSign,
+    IndianRupee,
     FolderKanban,
     CalendarDays,
     MessageSquare,
@@ -18,6 +20,7 @@ import {
     LogOut,
     Search,
     Bell,
+    CircleHelp,
     Mail,
     Plus,
     Calendar,
@@ -33,6 +36,7 @@ export default function ProjectsPage() {
     const [selectedCategory, setSelectedCategory] = useState("active");
     const [searchQuery, setSearchQuery] = useState("");
     const [isLoading, setIsLoading] = useState(true);
+    const [user, setUser] = useState(null);
 
     // Live MongoDB Projects state
     const [projects, setProjects] = useState([]);
@@ -42,6 +46,11 @@ export default function ProjectsPage() {
         async function fetchDbProjects() {
             setIsLoading(true);
             try {
+                // Fetch logged-in user info
+                api.get("/auth/me").then(res => {
+                    if (res?.data?.user) setUser(res.data.user);
+                }).catch(() => null);
+
                 // Fetch clients map first
                 const clientMap = {};
                 const clientRes = await clientService.getClients().catch(() => null);
@@ -83,7 +92,7 @@ export default function ProjectsPage() {
                             actionLabel: "View Details",
                             category: p.status === "archived" ? "archived" : "active",
                             starred: true,
-                            revenue: p.revenue ? `$${Number(p.revenue).toLocaleString()}` : "$50,000"
+                            revenue: p.revenue ? `₹${Number(p.revenue).toLocaleString()}` : "₹50,000"
                         };
                     });
 
@@ -123,8 +132,6 @@ export default function ProjectsPage() {
         return matchesCategory && matchesSearch;
     });
 
-    const starredProjects = projects.filter(p => p.starred);
-
     return (
         <div className="dashboard-container">
             {/* Sidebar */}
@@ -132,34 +139,13 @@ export default function ProjectsPage() {
 
             {/* Main Content Area */}
             <div className="main-content">
-                {/* Header */}
-                <header className="header">
-                    <div className="search-box">
-                        <Search className="search-icon" size={18} />
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search database projects, clients..."
-                        />
-                    </div>
-
-                    <div className="header-right">
-                        <Bell className="icons" />
-                        <Mail className="icons" />
-
-                        <div className="profile">
-                            <img
-                                src="https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&auto=format&fit=crop&q=80"
-                                alt="Alex Mercer"
-                            />
-                            <div>
-                                <h4>Alex Mercer</h4>
-                                <span>CEO &amp; Product Head</span>
-                            </div>
-                        </div>
-                    </div>
-                </header>
+                <Navbar
+                    user={user}
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    placeholder="Search database projects, clients..."
+                    helpText="Projects Hub — View, create, and manage active corporate initiatives, contract revenues, team leads, and project milestones."
+                />
 
                 {/* Main Body Layout with Secondary Nested Panel */}
                 <div style={{ display: "flex", paddingTop: "80px", minHeight: "100vh" }}>
@@ -199,24 +185,6 @@ export default function ProjectsPage() {
                                         </span>
                                     </div>
                                 </li>
-                            </ul>
-                        </div>
-
-                        <div>
-                            <h3>Important Projects</h3>
-                            <ul className="secondary-nav-list">
-                                {starredProjects.map(p => (
-                                    <li key={p.id}>
-                                        <div className="secondary-nav-item">
-                                            <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                                                <Star size={16} fill="#f4c430" stroke="#f4c430" />
-                                                <span style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap", maxWidth: "160px" }}>
-                                                    {p.title}
-                                                </span>
-                                            </span>
-                                        </div>
-                                    </li>
-                                ))}
                             </ul>
                         </div>
                     </aside>

@@ -3,4 +3,5 @@ const nextConfig = {
   /* config options here */
 };
 
+// Triggering router manifest rebuild after git pull
 export default nextConfig;

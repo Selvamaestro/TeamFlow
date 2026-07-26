@@ -20,8 +20,12 @@ function sanitizeUser(userDoc, viewerRole) {
 function sanitizeProject(projectDoc, viewerRole) {
   if (!projectDoc) return projectDoc;
   const project = projectDoc.toObject ? projectDoc.toObject() : { ...projectDoc };
-  if (viewerRole !== "ceo") {
+  if (!["ceo", "manager", "hr"].includes(viewerRole)) {
     delete project.revenue;
+    delete project.budget;
+    delete project.expenses;
+    delete project.paidAmount;
+    delete project.pendingAmount;
   }
   return project;
 }

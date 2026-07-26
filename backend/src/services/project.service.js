@@ -34,15 +34,71 @@ async function listProjects(viewer, { status, client } = {}) {
     .sort({ createdAt: -1 });
 }
 
-// side effect: auto-creates the project's project_group Conversation, pre-populated
-// with every ceo/manager ("admin") plus the creator
-async function createProject(creator, { title, description, client, dueDate, revenue, teamLeader, members }) {
+async function createProject(creator, data) {
+  const {
+    title,
+    description,
+    client,
+    status,
+    startDate,
+    endDate,
+    dueDate,
+    budget = 0,
+    revenue = 0,
+    expenses = 0,
+    paidAmount = 0,
+    pendingAmount,
+    paymentStatus,
+    teamLeader,
+    members,
+  } = data;
+
+  if (client) {
+    const Client = require("../models/Client");
+    const clientDoc = await Client.findById(client);
+    if (clientDoc && (clientDoc.status || "active").toLowerCase() === "inactive") {
+      throw new BadRequestError("the client is inactive");
+    }
+  }
+
+  const now = new Date();
+  const effectiveStartDate = startDate ? new Date(startDate) : now;
+  const effectiveDueDate = dueDate ? new Date(dueDate) : (endDate ? new Date(endDate) : null);
+  const effectiveEndDate = endDate ? new Date(endDate) : effectiveDueDate;
+
+  const targetValue = Number(revenue) || Number(budget) || 0;
+  const numericPaid = Number(paidAmount) || 0;
+
+  if (targetValue > 0 && numericPaid > targetValue) {
+    throw new BadRequestError("Exceeded the pending amount");
+  }
+
+  const computedPending = pendingAmount !== undefined ? Number(pendingAmount) : Math.max(0, targetValue - numericPaid);
+  let computedStatus = paymentStatus;
+  if (!computedStatus) {
+    if (numericPaid >= targetValue && targetValue > 0) {
+      computedStatus = "Paid";
+    } else if (numericPaid > 0) {
+      computedStatus = "Partial";
+    } else {
+      computedStatus = "Pending";
+    }
+  }
+
   const project = await Project.create({
     title,
     description,
     client,
-    dueDate,
-    revenue,
+    status: status || "planning",
+    startDate: effectiveStartDate,
+    endDate: effectiveEndDate,
+    dueDate: effectiveDueDate,
+    budget: Number(budget) || 0,
+    revenue: Number(revenue) || 0,
+    expenses: Number(expenses) || 0,
+    paidAmount: numericPaid,
+    pendingAmount: computedPending,
+    paymentStatus: computedStatus,
     teamLeader: teamLeader || null,
     members: Array.isArray(members) ? members : [],
     manager: creator.id,
@@ -59,7 +115,23 @@ async function createProject(creator, { title, description, client, dueDate, rev
   return project;
 }
 
-const GENERAL_EDITABLE_FIELDS = ["title", "description", "dueDate", "status"];
+const GENERAL_EDITABLE_FIELDS = [
+  "title",
+  "description",
+  "dueDate",
+  "startDate",
+  "endDate",
+  "status",
+  "budget",
+  "revenue",
+  "expenses",
+  "paidAmount",
+  "pendingAmount",
+  "paymentStatus",
+  "client",
+  "teamLeader",
+  "members",
+];
 
 // Team Leader of that project, Manager, CEO, HR
 // Renaming keeps the Conversation's name in sync.
@@ -69,12 +141,36 @@ async function updateProject(project, requester, projectRoleFlags, data) {
     throw new ForbiddenError("Forbidden");
   }
 
-  if (requester.role === "ceo" && data.revenue !== undefined) {
-    project.revenue = data.revenue;
-  }
-
   for (const field of GENERAL_EDITABLE_FIELDS) {
     if (data[field] !== undefined) project[field] = data[field];
+  }
+
+  // Ensure numerical types
+  if (data.expenses !== undefined) project.expenses = Number(project.expenses) || 0;
+  if (data.paidAmount !== undefined) project.paidAmount = Number(project.paidAmount) || 0;
+  if (data.revenue !== undefined) project.revenue = Number(project.revenue) || 0;
+  if (data.budget !== undefined) project.budget = Number(project.budget) || 0;
+
+  const targetVal = Number(project.revenue) || Number(project.budget) || 0;
+  const numericPaid = Number(project.paidAmount) || 0;
+
+  if (targetVal > 0 && numericPaid > targetVal) {
+    throw new BadRequestError("Exceeded the pending amount");
+  }
+
+  // Recalculate pendingAmount if budget, revenue, or paidAmount modified and pending not explicitly set
+  if (data.pendingAmount === undefined && (data.budget !== undefined || data.paidAmount !== undefined || data.revenue !== undefined)) {
+    project.pendingAmount = Math.max(0, targetVal - numericPaid);
+  }
+
+  if (data.paymentStatus === undefined && (data.paidAmount !== undefined || data.budget !== undefined || data.revenue !== undefined)) {
+    if (numericPaid >= targetVal && targetVal > 0) {
+      project.paymentStatus = "Paid";
+    } else if (numericPaid > 0) {
+      project.paymentStatus = "Partial";
+    } else {
+      project.paymentStatus = "Pending";
+    }
   }
 
   await project.save();

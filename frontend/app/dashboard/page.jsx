@@ -1,10 +1,17 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import api from "@/lib/api";
 import Link from "next/link";
 import "./dashboard.css";
 import Sidebar from "@/components/Sidebar";
+import Navbar from "@/components/Navbar";
+import { getAvatarUrl } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 import {
     LayoutDashboard,
     Users,
-    DollarSign,
+    IndianRupee,
     FolderKanban,
     CalendarDays,
     MessageSquare,
@@ -17,8 +24,79 @@ import {
     Search,
     Plus,
 } from "lucide-react";
+import {
+    ResponsiveContainer,
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    Tooltip,
+    CartesianGrid,
+} from "recharts";
 
 export default function Dashboard() {
+    const [dashboard, setDashboard] = useState(null);
+    const [user, setUser] = useState(null);
+    const [leaveRequests, setLeaveRequests] = useState([]);
+    const [projects, setProjects] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [weeklySeries, setWeeklySeries] = useState([]);
+    const [agenda, setAgenda] = useState([]);
+    const router = useRouter();
+
+
+    useEffect(() => {
+
+        async function fetchDashboardData() {
+
+            try {
+
+                const [
+                    overviewRes,
+                    leaveRes,
+                    projectRes,
+                    revenueRes,
+                    userRes,
+                    agendaRes
+                ] = await Promise.all([
+
+                    api.get("/dashboard/overview"),
+                    api.get("/leave?status=pending"),
+                    api.get("/projects"),
+                    api.get("/dashboard/revenue"),
+                    api.get("/auth/me"),
+                    api.get("/agenda")
+
+                ]);
+
+                setDashboard(overviewRes.data);
+
+                setLeaveRequests(leaveRes.data.requests);
+
+                setProjects(projectRes.data.projects);
+
+                setUser(userRes.data.user);
+                setWeeklySeries(revenueRes.data.weeklySeries);
+                setAgenda(agendaRes.data.agenda);
+            } catch (error) {
+
+                console.error("Dashboard Error:", error);
+
+            } finally {
+
+                setLoading(false);
+
+            }
+
+        }
+
+        fetchDashboardData();
+
+    }, []);
+    if (loading) {
+        return <h2>Loading Dashboard...</h2>;
+    }
+
     return (
         <div className="dashboard-container">
             {/* ================= Sidebar ================= */}
@@ -29,47 +107,11 @@ export default function Dashboard() {
             <div className="main-content">
 
                 {/* Header */}
-
-                <header className="header">
-
-                    <div className="search-box">
-
-                        <Search className="search-icon" size={18} />
-
-                        <input
-                            type="text"
-                            placeholder="Search enterprise data..."
-                        />
-
-                    </div>
-
-                    <div className="header-right">
-
-                        <div className="icons">
-                            <Bell size={20} />
-                        </div>
-
-                        <div className="icons">
-                            <CircleHelp size={20} />
-                        </div>
-
-                        <div className="profile">
-
-                            <div className="profile-text">
-                                <h4>Alexander Vance</h4>
-                                <span>Chief Executive Officer</span>
-                            </div>
-
-                            <img
-                                src="https://i.pravatar.cc/100"
-                                alt="profile"
-                            />
-
-                        </div>
-
-                    </div>
-
-                </header>
+                <Navbar
+                    user={user}
+                    placeholder="Search enterprise data..."
+                    helpText="Executive Dashboard — Real-time performance metrics, workforce attendance, financial summaries, and daily agenda."
+                />
 
                 {/* Dashboard */}
 
@@ -108,7 +150,7 @@ export default function Dashboard() {
                                 Today's Present Employees
                             </p>
 
-                            <h2>1,284</h2>
+                            <h2>{dashboard?.attendanceToday}</h2>
 
                             <div className="progress">
 
@@ -117,7 +159,9 @@ export default function Dashboard() {
                             </div>
 
                             <small>
-                                92% of total workforce currently logged in.
+
+                                Present: {dashboard?.attendanceToday} / {dashboard?.totalEmployees}
+
                             </small>
 
                         </div>
@@ -131,7 +175,7 @@ export default function Dashboard() {
                             <div className="card-top">
 
                                 <div className="icon-box revenue-icon">
-                                    <DollarSign size={28} />
+                                    <IndianRupee size={28} />
                                 </div>
 
                                 <span className="badge green">
@@ -144,11 +188,15 @@ export default function Dashboard() {
                                 Month Revenue (MTD)
                             </p>
 
-                            <h2>$842,500</h2>
+                            <h2>
+
+                                ₹ {dashboard?.revenueThisMonth?.toLocaleString() || 0}
+
+                            </h2>
 
                             <small>
                                 Projected monthly target:
-                                <strong> $1.1M</strong>
+                                <strong> ₹1.1M</strong>
                             </small>
 
                         </div>
@@ -175,7 +223,7 @@ export default function Dashboard() {
                                 Active Client Projects
                             </p>
 
-                            <h2>42</h2>
+                            <h2>{dashboard?.activeProjects}</h2>
 
                             <div className="avatars">
 
@@ -199,151 +247,134 @@ export default function Dashboard() {
                     <div className="overview-grid">
 
                         {/* LEFT SIDE */}
+                        <div className="left-panel">
 
-                        <div className="overview-card">
+                            <div className="overview-card">
 
-                            {/* Pending Leave */}
+                                {/* Pending Leave */}
 
-                            <div className="section-header">
-                                <h3>Pending Leave Requests</h3>
-                                <button>View All</button>
-                            </div>
-
-                            {/* Employee 1 */}
-
-                            <div className="leave-card">
-
-                                <div className="leave-info">
-
-                                    <div className="avatar">
-                                        JD
-                                    </div>
-
-                                    <div>
-
-                                        <h4>Julianne Dorsey</h4>
-
-                                        <p>Vacation • Oct 24-27</p>
-
-                                    </div>
-
+                                <div className="section-header">
+                                    <h3>Pending Leave Requests</h3>
+                                    <button>View All</button>
                                 </div>
+                                {leaveRequests.length === 0 ? (
 
-                                <div className="leave-buttons">
+                                    <p>No pending leave requests.</p>
 
-                                    <button className="approve">
-                                        Approve
-                                    </button>
+                                ) : (
 
-                                    <button className="reject">
-                                        Reject
-                                    </button>
+                                    leaveRequests.slice(0, 2).map((leave) => (
 
-                                </div>
+                                        <div className="leave-card" key={leave._id}>
 
-                            </div>
+                                            <div className="leave-info">
 
-                            {/* Employee 2 */}
+                                                <div className="avatar">
 
-                            <div className="leave-card">
+                                                    {leave.user?.name?.charAt(0)}
 
-                                <div className="leave-info">
+                                                </div>
 
-                                    <div className="avatar purple">
-                                        MK
-                                    </div>
+                                                <div>
 
-                                    <div>
+                                                    <h4>{leave.user?.name}</h4>
 
-                                        <h4>Marcus Knight</h4>
+                                                    <p>
+                                                        {leave.type} • {new Date(leave.startDate).toLocaleDateString()}
+                                                    </p>
 
-                                        <p>Sick Leave • Oct 12</p>
+                                                </div>
 
-                                    </div>
+                                            </div>
 
-                                </div>
+                                            <div className="leave-buttons">
 
-                                <div className="leave-buttons">
+                                                <button className="approve">
+                                                    Approve
+                                                </button>
 
-                                    <button className="approve">
-                                        Approve
-                                    </button>
+                                                <button className="reject">
+                                                    Reject
+                                                </button>
 
-                                    <button className="reject">
-                                        Reject
-                                    </button>
-
-                                </div>
-
-                            </div>
-
-                            {/* Project Progress */}
-
-                            <div className="project-section">
-
-                                <h3>Project Progress</h3>
-
-                                {/* Project 1 */}
-
-                                <div className="project">
-
-                                    <div className="project-header">
-
-                                        <div>
-
-                                            <h4>Cloud Infrastructure Revamp</h4>
-
-                                            <p>Due : Dec 15, 2024</p>
+                                            </div>
 
                                         </div>
 
-                                        <span>75%</span>
+                                    ))
 
-                                    </div>
-
-                                    <div className="progress">
-
-                                        <div
-                                            className="progress-fill"
-                                            style={{ width: "75%" }}
-                                        ></div>
-
-                                    </div>
-
-                                </div>
-
-                                {/* Project 2 */}
-
-                                <div className="project">
-
-                                    <div className="project-header">
-
-                                        <div>
-
-                                            <h4>Mobile App Redesign</h4>
-
-                                            <p>Due : Nov 30, 2024</p>
-
-                                        </div>
-
-                                        <span>40%</span>
-
-                                    </div>
-
-                                    <div className="progress">
-
-                                        <div
-                                            className="progress-fill"
-                                            style={{ width: "40%" }}
-                                        ></div>
-
-                                    </div>
-
-                                </div>
-
+                                )}
                             </div>
+                            <div className="overview-card">
+
+
+
+                                <div className="section-header">
+                                    <h3>Project Progress</h3>
+                                    <button>View All</button>
+                                </div>
+
+                                {projects.length === 0 ? (
+                                    <p>No active projects.</p>
+                                ) : (
+                                    projects.slice(0, 2).map((project) => (
+                                        <div key={project._id} className="project-card">
+                                            <h4>{project.title}</h4>
+
+                                            <div className="project-progress-item">
+
+                                                <div className="project-header">
+
+                                                    <h4>{project.title}</h4>
+
+                                                    <span>
+                                                        {project.status === "completed"
+                                                            ? "100%"
+                                                            : project.status === "planning"
+                                                                ? "30%"
+                                                                : project.status === "in_progress"
+                                                                    ? "70%"
+                                                                    : "50%"}
+                                                    </span>
+
+                                                </div>
+
+                                                <small>
+                                                    Due{" "}
+                                                    {project.dueDate
+                                                        ? new Date(project.dueDate).toLocaleDateString()
+                                                        : "N/A"}
+                                                </small>
+
+                                                <div className="progress">
+
+                                                    <div
+                                                        className="progress-fill employee-progress"
+                                                        style={{
+                                                            width:
+                                                                project.status === "completed"
+                                                                    ? "100%"
+                                                                    : project.status === "planning"
+                                                                        ? "30%"
+                                                                        : project.status === "in_progress"
+                                                                            ? "70%"
+                                                                            : "50%"
+                                                        }}
+                                                    />
+
+                                                </div>
+
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+
+
 
                         </div>
+
                         {/* RIGHT SIDE */}
 
                         <div className="right-panel">
@@ -356,35 +387,40 @@ export default function Dashboard() {
 
                                 <p>Past 7 days performance</p>
 
-                                <div className="chart">
+                                <div style={{ width: "100%", height: 260 }}>
 
-                                    <div className="bar h40"><span>$12k</span></div>
+                                    <ResponsiveContainer>
 
-                                    <div className="bar h55"><span>$18k</span></div>
+                                        <BarChart data={weeklySeries}>
 
-                                    <div className="bar h45"><span>$14k</span></div>
+                                            <CartesianGrid strokeDasharray="3 3" />
 
-                                    <div className="bar h70"><span>$24k</span></div>
+                                            <XAxis dataKey="day" />
 
-                                    <div className="bar h90"><span>$32k</span></div>
+                                            <YAxis
+                                                tickFormatter={(value) => `₹${value / 1000}k`}
+                                            />
 
-                                    <div className="bar active h85"><span>$29k</span></div>
+                                            <Tooltip
+                                                formatter={(value) => [
+                                                    `₹${value.toLocaleString()}`,
+                                                    "Revenue"
+                                                ]}
+                                            />
 
-                                    <div className="bar active h95"><span>$34k</span></div>
+                                            <Bar
+                                                dataKey="revenue"
+                                                fill="#17305c"
+                                                radius={[8, 8, 0, 0]}
+                                            />
+
+                                        </BarChart>
+
+                                    </ResponsiveContainer>
 
                                 </div>
 
-                                <div className="days">
 
-                                    <span>Mon</span>
-                                    <span>Tue</span>
-                                    <span>Wed</span>
-                                    <span>Thu</span>
-                                    <span>Fri</span>
-                                    <span className="active-day">Sat</span>
-                                    <span className="active-day">Sun</span>
-
-                                </div>
 
                             </div>
 
@@ -398,31 +434,51 @@ export default function Dashboard() {
                                         <ClipboardList size={24} />
                                     </div>
 
-                                    <h3>Your Agenda</h3>
+                                    <h3>Today's Schedule</h3>
 
                                 </div>
 
-                                <p>
-                                    3 high-priority meetings today.
-                                </p>
+
 
                                 <ul>
 
-                                    <li>
+                                    {agenda.length === 0 ? (
 
-                                        <span className="yellow-dot"></span>
+                                        <p>No events scheduled for today.</p>
 
-                                        Quarterly Review: Finance
+                                    ) : (
 
-                                    </li>
+                                        agenda
+                                            .filter((event) => {
 
-                                    <li>
+                                                const today = new Date().toDateString();
 
-                                        <span className="green-dot"></span>
+                                                return (
+                                                    new Date(event.date).toDateString() === today
+                                                );
 
-                                        Board Member Luncheon
+                                            })
+                                            .map((event) => (
 
-                                    </li>
+                                                <li key={event._id}>
+
+                                                    <span
+                                                        className={
+                                                            event.type === "Meeting"
+                                                                ? "yellow-dot"
+                                                                : event.type === "Task"
+                                                                    ? "green-dot"
+                                                                    : "blue-dot"
+                                                        }
+                                                    ></span>
+
+                                                    <strong>{event.time}</strong> - {event.title}
+
+                                                </li>
+
+                                            ))
+
+                                    )}
 
                                 </ul>
 

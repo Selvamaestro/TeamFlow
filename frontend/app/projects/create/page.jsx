@@ -11,7 +11,7 @@ import { userService } from "../../../services/userService";
 import {
     LayoutDashboard,
     Users,
-    DollarSign,
+    IndianRupee,
     FolderKanban,
     CalendarDays,
     MessageSquare,
@@ -41,13 +41,17 @@ export default function CreateProjectPage() {
     const [submitSuccess, setSubmitSuccess] = useState(false);
     const [dragActive, setDragActive] = useState(false);
     const [uploadedFiles, setUploadedFiles] = useState([]);
-    
+
     // Database collections data
     const [dbClients, setDbClients] = useState([]);
     const [teamLeaders, setTeamLeaders] = useState([]);
     const [employees, setEmployees] = useState([]);
     const [employeeSearchQuery, setEmployeeSearchQuery] = useState("");
     const [memberLimitWarning, setMemberLimitWarning] = useState("");
+    
+    // Inactive Client Validation States
+    const [clientError, setClientError] = useState("");
+    const [showInactivePopup, setShowInactivePopup] = useState(false);
 
     const [formData, setFormData] = useState({
         title: "",
@@ -55,6 +59,7 @@ export default function CreateProjectPage() {
         clientId: "",
         teamLeaderId: "",
         selectedMembers: [],
+        startDate: new Date().toISOString().split("T")[0],
         dueDate: "",
         revenue: "50000",
         autoChat: true
@@ -68,8 +73,12 @@ export default function CreateProjectPage() {
                 const clientRes = await clientService.getClients().catch(() => null);
                 if (clientRes?.clients && Array.isArray(clientRes.clients)) {
                     setDbClients(clientRes.clients);
-                    if (clientRes.clients.length > 0) {
-                        setFormData(prev => ({ ...prev, clientId: clientRes.clients[0]._id }));
+                    // Preselect first active client
+                    const firstActive = clientRes.clients.find(c => (c.status || "active").toLowerCase() !== "inactive");
+                    if (firstActive) {
+                        setFormData(prev => ({ ...prev, clientId: firstActive._id }));
+                    } else if (clientRes.clients.length > 0) {
+                        setFormData(prev => ({ ...prev, clientId: "" }));
                     }
                 }
 
@@ -99,6 +108,22 @@ export default function CreateProjectPage() {
 
         fetchInitialData();
     }, []);
+
+    const handleClientChange = (e) => {
+        const selectedId = e.target.value;
+        const selectedClient = dbClients.find(c => c._id === selectedId);
+
+        if (selectedClient && (selectedClient.status || "active").toLowerCase() === "inactive") {
+            setClientError("the client is inactive");
+            setShowInactivePopup(true);
+            // Do NOT allow that specific client to be selected
+            return;
+        }
+
+        setClientError("");
+        setShowInactivePopup(false);
+        setFormData(prev => ({ ...prev, clientId: selectedId }));
+    };
 
     const toggleMemberSelection = (userId) => {
         setMemberLimitWarning("");
@@ -162,17 +187,30 @@ export default function CreateProjectPage() {
         e.preventDefault();
         if (!formData.title) return;
 
+        // Check if selected client is inactive
+        const selectedClient = dbClients.find(c => c._id === (formData.clientId || (dbClients[0] ? dbClients[0]._id : undefined)));
+        if (!formData.clientId || (selectedClient && (selectedClient.status || "active").toLowerCase() === "inactive")) {
+            setClientError("the client is inactive");
+            setShowInactivePopup(true);
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
             // Send payload to backend with teamLeader and members IDs
+            const selectedDueDate = formData.dueDate ? new Date(formData.dueDate) : new Date("2026-12-01");
+            const selectedStartDate = formData.startDate ? new Date(formData.startDate) : new Date();
+
             await projectService.createProject({
                 title: formData.title,
                 description: formData.description,
-                client: formData.clientId || (dbClients[0] ? dbClients[0]._id : undefined),
+                client: formData.clientId,
                 teamLeader: formData.teamLeaderId || undefined,
                 members: formData.selectedMembers,
-                dueDate: formData.dueDate ? new Date(formData.dueDate) : new Date("2026-12-01"),
+                startDate: selectedStartDate,
+                dueDate: selectedDueDate,
+                endDate: selectedDueDate,
                 revenue: Number(formData.revenue) || 50000,
                 status: "planning"
             });
@@ -184,12 +222,14 @@ export default function CreateProjectPage() {
                 router.push("/projects");
             }, 1200);
         } catch (err) {
-            console.warn("Project creation notice:", err.message);
+            const errMsg = err.response?.data?.message || err.message || "Failed to create project";
+            if (errMsg.toLowerCase().includes("inactive")) {
+                setClientError("the client is inactive");
+                setShowInactivePopup(true);
+            } else {
+                console.warn("Project creation notice:", errMsg);
+            }
             setIsSubmitting(false);
-            setSubmitSuccess(true);
-            setTimeout(() => {
-                router.push("/projects");
-            }, 1200);
         }
     };
 
@@ -272,18 +312,26 @@ export default function CreateProjectPage() {
                                 <label>Client Account</label>
                                 <select
                                     value={formData.clientId}
-                                    onChange={(e) => setFormData({ ...formData, clientId: e.target.value })}
+                                    onChange={handleClientChange}
                                 >
                                     {dbClients.length === 0 ? (
                                         <option value="">No clients found in database</option>
                                     ) : (
-                                        dbClients.map(c => (
-                                            <option key={c._id} value={c._id}>
-                                                {c.company || c.name} ({c.email})
-                                            </option>
-                                        ))
+                                        dbClients.map(c => {
+                                            const isInactive = (c.status || "active").toLowerCase() === "inactive";
+                                            return (
+                                                <option key={c._id} value={c._id}>
+                                                    {c.company || c.name} ({c.email}) {isInactive ? " — [INACTIVE]" : ""}
+                                                </option>
+                                            );
+                                        })
                                     )}
                                 </select>
+                                {clientError && (
+                                    <div style={{ color: "#d63031", fontSize: "13px", fontWeight: "600", marginTop: "6px", display: "flex", alignItems: "center", gap: "6px" }}>
+                                        <AlertCircle size={15} /> {clientError}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Team Leader Filtered Dropdown (Exclusively Team Leader role) */}
@@ -308,7 +356,7 @@ export default function CreateProjectPage() {
                             </div>
 
                             <div className="form-group">
-                                <label>Contract Revenue ($ USD)</label>
+                                <label>Contract Revenue (₹ INR)</label>
                                 <input
                                     type="number"
                                     value={formData.revenue}
@@ -317,14 +365,23 @@ export default function CreateProjectPage() {
                                 />
                             </div>
 
-                            <div className="form-group">
-                                <label>Target Completion Date</label>
-                                <input
-                                    type="date"
-                                    value={formData.dueDate}
-                                    onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                                />
-                            </div>
+                             <div className="form-group">
+                                 <label>Start Date (Defaults to Today)</label>
+                                 <input
+                                     type="date"
+                                     value={formData.startDate}
+                                     onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                                 />
+                             </div>
+
+                             <div className="form-group">
+                                 <label>Target Completion Date (Due Date)</label>
+                                 <input
+                                     type="date"
+                                     value={formData.dueDate}
+                                     onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                                 />
+                             </div>
 
                             {/* Assign Employees Table Listing Format (Max 3 Members) */}
                             <div className="form-group full-width">
@@ -517,6 +574,29 @@ export default function CreateProjectPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Inactive Client Modal Alert Popup */}
+            {showInactivePopup && (
+                <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "rgba(0,32,69,0.5)", backdropFilter: "blur(4px)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setShowInactivePopup(false)}>
+                    <div style={{ background: "#ffffff", padding: "32px", borderRadius: "20px", maxWidth: "420px", width: "90%", textAlign: "center", boxShadow: "0 20px 50px rgba(0,32,69,0.25)" }} onClick={e => e.stopPropagation()}>
+                        <div style={{ width: "56px", height: "56px", borderRadius: "50%", background: "#ffeaea", color: "#d63031", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                            <AlertCircle size={32} />
+                        </div>
+                        <h3 style={{ fontSize: "20px", fontWeight: "700", color: "#002045", marginBottom: "8px" }}>Selection Restricted</h3>
+                        <p style={{ color: "#d63031", fontWeight: "bold", fontSize: "16px", marginBottom: "16px" }}>the client is inactive</p>
+                        <p style={{ color: "#64748b", fontSize: "14px", lineHeight: "1.5", marginBottom: "24px" }}>
+                            This client account is currently marked as inactive and cannot be assigned to new projects.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => setShowInactivePopup(false)}
+                            style={{ background: "#002045", color: "#ffffff", border: "none", padding: "12px 24px", borderRadius: "10px", fontWeight: "bold", fontSize: "14px", cursor: "pointer", width: "100%" }}
+                        >
+                            Understand &amp; Close
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

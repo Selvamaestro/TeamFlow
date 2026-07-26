@@ -7,10 +7,11 @@ import "../../dashboard/dashboard.css";
 import Sidebar from "@/components/Sidebar";
 import { clientService } from "../../../services/clientService";
 import { projectService } from "../../../services/projectService";
+import api from "@/lib/api";
 import {
     LayoutDashboard,
     Users,
-    DollarSign,
+    IndianRupee,
     FolderKanban,
     CalendarDays,
     MessageSquare,
@@ -19,6 +20,7 @@ import {
     LogOut,
     Search,
     Bell,
+    CircleHelp,
     Mail,
     ArrowLeft,
     Download,
@@ -35,7 +37,8 @@ import {
     Trash2,
     Plus,
     Clock,
-    FileText
+    FileText,
+    X
 } from "lucide-react";
 
 export default function ClientDetailPage({ params }) {
@@ -48,11 +51,31 @@ export default function ClientDetailPage({ params }) {
     const [isLoading, setIsLoading] = useState(true);
     const [isDeleting, setIsDeleting] = useState(false);
 
+    // Edit Client Modal state
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [editErrorMessage, setEditErrorMessage] = useState("");
+    const [editFormData, setEditFormData] = useState({
+        name: "",
+        company: "",
+        email: "",
+        phone: "",
+        website: "",
+        status: "active",
+        notes: ""
+    });
+
+    const [user, setUser] = useState(null);
+
     // Fetch Live Client and Projects from MongoDB Database
     useEffect(() => {
         async function fetchClientDetails() {
             setIsLoading(true);
             try {
+                api.get("/auth/me").then(res => {
+                    if (res?.data?.user) setUser(res.data.user);
+                }).catch(() => null);
+
                 let raw = null;
                 // Try direct getClientById or search list
                 try {
@@ -122,17 +145,78 @@ export default function ClientDetailPage({ params }) {
         }
     };
 
+    const openEditModal = () => {
+        if (!dbClient) return;
+        setEditFormData({
+            name: dbClient.contactPerson || "",
+            company: dbClient.name || "",
+            email: dbClient.email || "",
+            phone: dbClient.phone || "",
+            website: dbClient.website || "",
+            status: dbClient.status === "INACTIVE" ? "inactive" : "active",
+            notes: dbClient.notes || ""
+        });
+        setEditErrorMessage("");
+        setIsEditModalOpen(true);
+    };
+
+    const handleSaveClientEdits = async (e) => {
+        e.preventDefault();
+        if (!editFormData.company.trim()) {
+            setEditErrorMessage("Company name is required");
+            return;
+        }
+
+        setIsUpdating(true);
+        setEditErrorMessage("");
+
+        try {
+            await clientService.updateClient(dbClient.id, {
+                name: editFormData.name,
+                company: editFormData.company,
+                email: editFormData.email,
+                phone: editFormData.phone,
+                status: editFormData.status,
+                notes: editFormData.notes
+            });
+
+            const companyName = editFormData.company.trim();
+            const words = companyName.split(" ");
+            const initials = words.length >= 2 ? (words[0][0] + words[1][0]).toUpperCase() : companyName.substring(0, 2).toUpperCase();
+
+            setDbClient(prev => ({
+                ...prev,
+                name: companyName,
+                initials: initials,
+                contactPerson: editFormData.name || prev.contactPerson,
+                email: editFormData.email || prev.email,
+                phone: editFormData.phone || prev.phone,
+                website: editFormData.website || prev.website,
+                status: editFormData.status.toUpperCase(),
+                badge: editFormData.status === "inactive" ? "INACTIVE ACCOUNT" : "KEY ACCOUNT",
+                notes: editFormData.notes
+            }));
+
+            setIsEditModalOpen(false);
+        } catch (err) {
+            console.error("Client update error:", err);
+            setEditErrorMessage(err.message || "Failed to update client record");
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
     // Dynamic project history & revenue
     const projectHistory = dbProjects.map(p => ({
         name: p.title,
         date: p.dueDate ? new Date(p.dueDate).toLocaleDateString() : "Dec 2026",
         status: (p.status || "planning").toUpperCase(),
-        revenue: p.revenue ? `$${Number(p.revenue).toLocaleString()}` : "$0"
+        revenue: p.revenue ? `₹${Number(p.revenue).toLocaleString()}` : "₹0"
     }));
 
     const totalCalculatedRevenue = dbProjects.length > 0
-        ? `$${dbProjects.reduce((acc, p) => acc + (p.revenue || 0), 0).toLocaleString()}`
-        : "$0";
+        ? `₹${dbProjects.reduce((acc, p) => acc + (p.revenue || 0), 0).toLocaleString()}`
+        : "₹0";
 
     return (
         <div className="dashboard-container">
@@ -152,19 +236,34 @@ export default function ClientDetailPage({ params }) {
                     </div>
 
                     <div className="header-right">
-                        <Bell className="icons" />
-                        <Mail className="icons" />
+                        <div className="icons">
+                            <Bell size={20} />
+                        </div>
 
-                        <div className="profile">
-                            <img
-                                src="https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&auto=format&fit=crop&q=80"
-                                alt="Elena Rodriguez"
-                            />
-                            <div>
-                                <h4>Elena Rodriguez</h4>
-                                <span>Managing Director</span>
+                        <div className="icons help-tooltip-wrapper">
+                            <CircleHelp size={20} />
+                            <div className="help-tooltip-popover">
+                                Client Profile — View client contact details, engagement history, linked projects, and retention metrics.
                             </div>
                         </div>
+
+                        <Link href="/profile">
+                            <div className="profile" style={{ cursor: "pointer" }}>
+                                <div className="profile-text">
+                                    <h4>{user?.name || "User"}</h4>
+                                    <span>{user?.role?.toUpperCase() || "ADMINISTRATOR"}</span>
+                                </div>
+                                <img
+                                    src={
+                                        user?.avatarUrl ||
+                                        `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                            user?.name || "User"
+                                        )}`
+                                    }
+                                    alt={user?.name || "Profile"}
+                                />
+                            </div>
+                        </Link>
                     </div>
                 </header>
 
@@ -183,7 +282,10 @@ export default function ClientDetailPage({ params }) {
                             <button className="dashboard-btn-secondary">
                                 <Download size={16} /> Export Record
                             </button>
-                            <button className="dashboard-btn-primary">
+                            <button
+                                className="dashboard-btn-primary"
+                                onClick={openEditModal}
+                            >
                                 <Edit size={16} /> Edit Client
                             </button>
                             {dbClient && (
@@ -286,7 +388,7 @@ export default function ClientDetailPage({ params }) {
                                 <div className="kpi-card">
                                     <div className="card-top">
                                         <div className="icon-box revenue-icon">
-                                            <DollarSign size={26} color="#002045" />
+                                            <IndianRupee size={26} color="#002045" />
                                         </div>
                                     </div>
                                     <div className="card-title">Total Revenue</div>
@@ -362,6 +464,165 @@ export default function ClientDetailPage({ params }) {
                     )}
                 </div>
             </div>
+
+            {/* Edit Client Modal Overlay */}
+            {isEditModalOpen && (
+                <div style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: "rgba(0, 32, 69, 0.4)",
+                    backdropFilter: "blur(4px)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    zIndex: 9999,
+                    padding: "20px"
+                }}>
+                    <div style={{
+                        background: "#fff",
+                        borderRadius: "16px",
+                        width: "100%",
+                        maxWidth: "650px",
+                        maxHeight: "90vh",
+                        overflowY: "auto",
+                        boxShadow: "0 25px 60px rgba(0,0,0,0.35)",
+                        border: "1px solid #cbd5e1"
+                    }}>
+                        {/* Header */}
+                        <div style={{
+                            padding: "20px 25px",
+                            borderBottom: "1px solid #e2e8f0",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            background: "#f8fafc"
+                        }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                <Edit size={20} color="#002045" />
+                                <h2 style={{ margin: 0, color: "#002045", fontSize: "20px" }}>Edit Client Information</h2>
+                            </div>
+                            <button
+                                onClick={() => setIsEditModalOpen(false)}
+                                style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}
+                            >
+                                <X size={22} />
+                            </button>
+                        </div>
+
+                        {/* Modal Body Form */}
+                        <form onSubmit={handleSaveClientEdits} style={{ padding: "25px" }}>
+                            {editErrorMessage && (
+                                <div style={{ background: "#ffeaea", color: "#d63031", padding: "12px 16px", borderRadius: "8px", fontSize: "13px", fontWeight: 600, marginBottom: "20px" }}>
+                                    {editErrorMessage}
+                                </div>
+                            )}
+
+                            <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+                                {/* Company Name & Contact Person */}
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "13px", color: "#334155", fontWeight: "bold", marginBottom: "6px" }}>Company Name *</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={editFormData.company}
+                                            onChange={(e) => setEditFormData({ ...editFormData, company: e.target.value })}
+                                            style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px", outline: "none", background: "#fff" }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "13px", color: "#334155", fontWeight: "bold", marginBottom: "6px" }}>Contact Person Name</label>
+                                        <input
+                                            type="text"
+                                            value={editFormData.name}
+                                            onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                                            style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px", outline: "none", background: "#fff" }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Email & Phone */}
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "13px", color: "#334155", fontWeight: "bold", marginBottom: "6px" }}>Contact Email</label>
+                                        <input
+                                            type="email"
+                                            value={editFormData.email}
+                                            onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                                            style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px", outline: "none", background: "#fff" }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "13px", color: "#334155", fontWeight: "bold", marginBottom: "6px" }}>Phone Number</label>
+                                        <input
+                                            type="text"
+                                            value={editFormData.phone}
+                                            onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                                            style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px", outline: "none", background: "#fff" }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Website & Status */}
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "13px", color: "#334155", fontWeight: "bold", marginBottom: "6px" }}>Company Website</label>
+                                        <input
+                                            type="text"
+                                            value={editFormData.website}
+                                            onChange={(e) => setEditFormData({ ...editFormData, website: e.target.value })}
+                                            style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px", outline: "none", background: "#fff" }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "13px", color: "#334155", fontWeight: "bold", marginBottom: "6px" }}>Account Status</label>
+                                        <select
+                                            value={editFormData.status}
+                                            onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                                            style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px", outline: "none", background: "#fff" }}
+                                        >
+                                            <option value="active">Active</option>
+                                            <option value="inactive">Inactive</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* Notes / Engagement Summary */}
+                                <div>
+                                    <label style={{ display: "block", fontSize: "13px", color: "#334155", fontWeight: "bold", marginBottom: "6px" }}>Account Notes &amp; Engagement Summary</label>
+                                    <textarea
+                                        rows={4}
+                                        value={editFormData.notes}
+                                        onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
+                                        style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px", outline: "none", background: "#fff" }}
+                                    ></textarea>
+                                </div>
+                            </div>
+
+                            {/* Modal Footer Actions */}
+                            <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "25px", paddingTop: "15px", borderTop: "1px solid #e2e8f0" }}>
+                                <button
+                                    type="button"
+                                    className="dashboard-btn-secondary"
+                                    onClick={() => setIsEditModalOpen(false)}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isUpdating}
+                                    className="dashboard-btn-primary"
+                                >
+                                    {isUpdating ? "Saving Changes..." : "Save Client Changes"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

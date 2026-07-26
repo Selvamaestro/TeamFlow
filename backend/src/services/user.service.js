@@ -89,9 +89,39 @@ async function getUserById(id, viewer) {
   if (!["hr", "manager", "ceo"].includes(viewer.role) && viewer.id !== id) {
     throw new ForbiddenError("Forbidden");
   }
-  return User.findById(id).select("+salary");
-}
 
+  const user = await User.findById(id).select("+salary");
+
+  if (!user) return null;
+
+  // Current projects
+  const projects = await Project.find({
+    members: user._id,
+  }).select("title status progress");
+
+  // Attendance count
+  const attendance = await Attendance.countDocuments({
+    user: user._id,
+    status: "present",
+  });
+
+  // Reward score
+  const rewards = await Reward.find({
+    user: user._id,
+  });
+
+  const rewardScore = rewards.reduce(
+    (sum, reward) => sum + reward.points,
+    0
+  );
+
+  return {
+    ...user.toObject(),
+    projects,
+    attendance,
+    rewardScore,
+  };
+}
 // side effects: adds the new user to the global channel once, and — if they're
 // themself an admin (ceo/manager) — backfills them into every existing project chat
 async function createUser(data) {

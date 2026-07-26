@@ -4,7 +4,7 @@ import Link from "next/link";
 import {
     LayoutDashboard,
     Users,
-    DollarSign,
+    IndianRupee,
     FolderKanban,
     CalendarDays,
     MessageSquare,
@@ -15,6 +15,16 @@ import {
 } from "lucide-react";
 
 export default function Sidebar({ active = "employees" }) {
+    const handleLogout = (e) => {
+        e.preventDefault();
+        if (typeof window !== "undefined") {
+            localStorage.removeItem("token");
+            localStorage.removeItem("teamflow_token");
+            localStorage.removeItem("user");
+            window.location.href = "/login";
+        }
+    };
+
     return (
         <aside className="sidebar">
             <div className="logo">
@@ -33,10 +43,10 @@ export default function Sidebar({ active = "employees" }) {
                     Employees
                 </Link>
 
-                <a href="#" className={active === "revenue" ? "active" : ""}>
-                    <DollarSign size={20} />
+                <Link href="/revenue" className={active === "revenue" ? "active" : ""}>
+                    <IndianRupee size={20} />
                     Revenue
-                </a>
+                </Link>
 
                 <Link href="/projects" className={active === "projects" ? "active" : ""}>
                     <FolderKanban size={20} />
@@ -60,8 +70,8 @@ export default function Sidebar({ active = "employees" }) {
             </nav>
 
             <div className="sidebar-bottom">
-                <Link href="/employees/add" className="project-btn" style={{ textDecoration: "none" }}>
-                    <Plus size={18} />
+                <Link href="/employees/add" className="project-btn" style={{ textDecoration: "none", color: "#ffffff", fontWeight: 600 }}>
+                    <Plus size={18} color="#ffffff" />
                     Add Employee
                 </Link>
 
@@ -70,7 +80,7 @@ export default function Sidebar({ active = "employees" }) {
                     Settings
                 </a>
 
-                <a href="/login" style={{ color: "#ef4444" }}>
+                <a href="/login" onClick={handleLogout} style={{ color: "#ef4444", cursor: "pointer" }}>
                     <LogOut size={18} />
                     Logout
                 </a>

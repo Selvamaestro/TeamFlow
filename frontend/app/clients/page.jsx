@@ -4,11 +4,13 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import "../dashboard/dashboard.css";
 import Sidebar from "@/components/Sidebar";
+import Navbar from "@/components/Navbar";
 import { clientService } from "../../services/clientService";
+import api from "@/lib/api";
 import {
     LayoutDashboard,
     Users,
-    DollarSign,
+    IndianRupee,
     FolderKanban,
     CalendarDays,
     MessageSquare,
@@ -43,6 +45,7 @@ export default function ClientsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [feedbackText, setFeedbackText] = useState("");
     const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+    const [user, setUser] = useState(null);
 
     // Live Clients State loaded exclusively from MongoDB database
     const [clientsList, setClientsList] = useState([]);
@@ -52,6 +55,9 @@ export default function ClientsPage() {
         async function fetchDbClients() {
             setIsLoading(true);
             try {
+                api.get("/auth/me").then(res => {
+                    if (res?.data?.user) setUser(res.data.user);
+                }).catch(() => null);
                 const res = await clientService.getClients();
                 if (res && res.clients && Array.isArray(res.clients)) {
                     const mappedDbClients = res.clients.map(c => {
@@ -148,33 +154,13 @@ export default function ClientsPage() {
             {/* Main Content Area */}
             <div className="main-content">
                 {/* Top Header */}
-                <header className="header">
-                    <div className="search-box">
-                        <Search className="search-icon" size={18} />
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search clients from database..."
-                        />
-                    </div>
-
-                    <div className="header-right">
-                        <Bell className="icons" />
-                        <CircleHelp className="icons" />
-
-                        <div className="profile">
-                            <img
-                                src="https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&auto=format&fit=crop&q=80"
-                                alt="Elena Rodriguez"
-                            />
-                            <div>
-                                <h4>Elena Rodriguez</h4>
-                                <span>Managing Director</span>
-                            </div>
-                        </div>
-                    </div>
-                </header>
+                <Navbar
+                    user={user}
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    placeholder="Search clients from database..."
+                    helpText="Client Directory — Manage client accounts, primary contacts, account statuses, and linked corporate projects."
+                />
 
                 {/* Dashboard Page Body */}
                 <div className="dashboard">

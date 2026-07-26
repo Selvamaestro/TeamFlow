@@ -9,7 +9,7 @@ const ctrl = require("../controllers/agenda.controller");
 
 router.use(authenticate);
 
-router.get("/", requireRole(["ceo"]), ctrl.getAgenda);
+router.get("/", requireRole(["ceo", "manager", "hr", "team_leader", "employee"]), ctrl.getAgenda);
 
 router.post("/", requireRole(["ceo"]), ctrl.createAgenda);
 

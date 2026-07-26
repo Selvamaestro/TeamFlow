@@ -55,25 +55,25 @@ export default function Dashboard() {
                 const viewerRole = userRes.data.user?.role;
                 setUser(userRes.data.user);
 
-                const [overviewRes, leaveRes, projectRes, agendaRes] = await Promise.all([
+                const [overviewRes, leaveRes, projectRes, agendaRes] = await Promise.allSettled([
                     api.get("/dashboard/overview"),
                     api.get("/leave?status=pending"),
                     api.get("/projects"),
                     api.get("/agenda"),
                 ]);
 
-                setDashboard(overviewRes.data);
-                setLeaveRequests(leaveRes.data.requests);
-                setProjects(projectRes.data.projects);
-                setAgenda(agendaRes.data.agenda);
+                if (overviewRes.status === "fulfilled") setDashboard(overviewRes.value.data);
+                if (leaveRes.status === "fulfilled") setLeaveRequests(leaveRes.value.data.requests || []);
+                if (projectRes.status === "fulfilled") setProjects(projectRes.value.data.projects || []);
+                if (agendaRes.status === "fulfilled") setAgenda(agendaRes.value.data.agenda || []);
 
-                // Revenue is CEO-only on the backend; only ask for it (and only render
-                // it) when the signed-in user is actually the CEO, otherwise this call
-                // 403s and — since it used to be bundled into the same Promise.all —
-                // took the whole dashboard down for Manager/HR.
                 if (viewerRole === "ceo") {
-                    const revenueRes = await api.get("/dashboard/revenue");
-                    setWeeklySeries(revenueRes.data.weeklySeries);
+                    try {
+                        const revenueRes = await api.get("/dashboard/revenue");
+                        setWeeklySeries(revenueRes.data.weeklySeries || []);
+                    } catch (err) {
+                        console.warn("Failed to fetch revenue series:", err);
+                    }
                 }
             } catch (error) {
 

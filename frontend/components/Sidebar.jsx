@@ -10,7 +10,6 @@ import {
     CalendarDays,
     MessageSquare,
     Building2,
-    Settings,
     LogOut,
     Plus
 } from "lucide-react";
@@ -19,16 +18,20 @@ import api from "@/lib/api";
 export default function Sidebar({ active = "employees" }) {
     // Seed from the cached user (set at login) so the menu doesn't flash the
     // full set before we can confirm the role, then re-verify against the API.
-    const [role, setRole] = useState(() => {
-        if (typeof window === "undefined") return null;
-        try {
-            return JSON.parse(localStorage.getItem("user") || "null")?.role || null;
-        } catch {
-            return null;
-        }
-    });
+    const [role, setRole] = useState(null);
 
     useEffect(() => {
+        if (typeof window !== "undefined") {
+            try {
+                const cachedUser = JSON.parse(localStorage.getItem("user") || "null");
+                if (cachedUser?.role) {
+                    setRole(cachedUser.role);
+                }
+            } catch (err) {
+                console.warn("Failed to read cached user role:", err);
+            }
+        }
+
         api.get("/auth/me")
             .then((res) => setRole(res.data?.user?.role || null))
             .catch(() => {});
@@ -117,11 +120,6 @@ export default function Sidebar({ active = "employees" }) {
                     <Plus size={18} color="#ffffff" />
                     Add Employee
                 </Link>
-
-                <a href="#">
-                    <Settings size={18} />
-                    Settings
-                </a>
 
                 <a href="/login" onClick={handleLogout} style={{ color: "#ef4444", cursor: "pointer" }}>
                     <LogOut size={18} />

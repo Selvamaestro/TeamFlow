@@ -21,8 +21,9 @@ export default function RootLayout({ children }) {
     <html
       lang="en"
       className={`${hanken.variable} ${geistMono.variable}`}
+      suppressHydrationWarning
     >
-      <body>{children}</body>
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }

@@ -198,7 +198,7 @@ const [form, setForm] = useState({
                                         onChange={handleChange}
                                     >
                                         <option>Engineering</option>
-                                        <option>HR</option>
+                                        <option>Marketing</option>
                                         <option>Sales</option>
                                         <option>Design</option>
                                     </select>

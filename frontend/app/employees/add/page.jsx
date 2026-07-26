@@ -245,7 +245,7 @@ export default function AddEmployee() {
 
                         <div className="form-grid">
 
-                            {/* 4. Department (Human Resources Removed) */}
+                            {/* 4. Department */}
                             <div className="form-group">
                                 <label>Department</label>
                                 <select
@@ -255,7 +255,6 @@ export default function AddEmployee() {
                                 >
                                     <option value="">Select Department</option>
                                     <option value="Engineering">Engineering</option>
-                                    <option value="Finance">Finance</option>
                                     <option value="Sales">Sales</option>
                                     <option value="Design">Design</option>
                                     <option value="Marketing">Marketing</option>

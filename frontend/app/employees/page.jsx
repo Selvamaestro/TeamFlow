@@ -13,7 +13,7 @@ import {
     Search,
     Plus,
     Cpu,
-    Users,
+    Megaphone,
     TrendingUp,
     Palette,
 } from "lucide-react";
@@ -23,28 +23,24 @@ const departments = [
         id: 1,
         icon: <Cpu size={24} />,
         title: "Engineering",
-        members: 42,
         code: "DEPT_01",
     },
     {
         id: 2,
-        icon: <Users size={24} />,
-        title: "HR",
-        members: 12,
+        icon: <Megaphone size={24} />,
+        title: "Marketing",
         code: "DEPT_02",
     },
     {
         id: 3,
         icon: <TrendingUp size={24} />,
         title: "Sales",
-        members: 28,
         code: "DEPT_03",
     },
     {
         id: 4,
         icon: <Palette size={24} />,
         title: "Design",
-        members: 15,
         code: "DEPT_04",
     },
 ];
@@ -74,27 +70,62 @@ export default function EmployeesPage() {
     useEffect(() => {
         fetchEmployees();
     }, []);
+
+    const departmentCounts = useMemo(() => {
+        const counts = {
+            Engineering: 0,
+            Marketing: 0,
+            Sales: 0,
+            Design: 0,
+        };
+
+        employees.forEach((emp) => {
+            if (emp.status === "inactive") return;
+            const dept = (emp.department || "").trim().toLowerCase();
+            const role = (emp.role || "").trim().toLowerCase();
+
+            if (dept.includes("engineer") || role.includes("engineer")) {
+                counts.Engineering += 1;
+            } else if (dept.includes("marketing") || role.includes("marketing")) {
+                counts.Marketing += 1;
+            } else if (dept.includes("sales") || role.includes("sales")) {
+                counts.Sales += 1;
+            } else if (dept.includes("design") || role.includes("design")) {
+                counts.Design += 1;
+            } else {
+                departments.forEach((d) => {
+                    if (dept === d.title.toLowerCase() || role === d.title.toLowerCase()) {
+                        counts[d.title] = (counts[d.title] || 0) + 1;
+                    }
+                });
+            }
+        });
+
+        return counts;
+    }, [employees]);
+
     const filteredEmployees = useMemo(() => {
-return employees.filter((employee) => {
+        return employees
+            .filter((employee) => {
+                if (employee.status !== "active") return false;
+                if (employee.role?.toLowerCase() === "ceo") return false;
 
-    if (employee.status !== "active") return false;
+                const searchText = search.toLowerCase();
 
-    const searchText = search.toLowerCase();
+                const matchesSearch =
+                    employee.name?.toLowerCase().includes(searchText) ||
+                    employee.email?.toLowerCase().includes(searchText) ||
+                    employee.department?.toLowerCase().includes(searchText) ||
+                    employee.role?.toLowerCase().includes(searchText) ||
+                    employee.currentProject?.toLowerCase().includes(searchText);
 
-    const matchesSearch =
-        employee.name?.toLowerCase().includes(searchText) ||
-        employee.email?.toLowerCase().includes(searchText) ||
-        employee.department?.toLowerCase().includes(searchText) ||
-        employee.role?.toLowerCase().includes(searchText) ||
-        employee.currentProject?.toLowerCase().includes(searchText);
+                const matchesRole =
+                    roleFilter === "All Roles" ||
+                    employee.role === roleFilter;
 
-    const matchesRole =
-        roleFilter === "All Roles" ||
-        employee.role === roleFilter;
-
-    return matchesSearch && matchesRole;
-
-});
+                return matchesSearch && matchesRole;
+            })
+            .sort((a, b) => (Number(b.attendance) || 0) - (Number(a.attendance) || 0));
     }, [employees, search, roleFilter]);
     const totalPages = Math.ceil(filteredEmployees.length / employeesPerPage);
 
@@ -121,7 +152,7 @@ return employees.filter((employee) => {
         ...new Set(
             employees
                 .map(emp => emp.role)
-                .filter(Boolean)
+                .filter(role => Boolean(role) && role.toLowerCase() !== "ceo")
         )
     ];
     return (
@@ -217,7 +248,7 @@ return employees.filter((employee) => {
 
                                 <h2>
 
-                                    {dept.members}
+                                    {departmentCounts[dept.title] || 0}
 
                                 </h2>
 
@@ -244,7 +275,7 @@ return employees.filter((employee) => {
 
                             <h2>Full Staff List</h2>
 
-                            <label>Filter by Department:</label>
+                            <label>Filter by Role:</label>
 
                             <select
                                 value={roleFilter}
@@ -272,7 +303,7 @@ return employees.filter((employee) => {
 
                                     <th>Name</th>
 
-                                    <th>Department</th>
+                                    <th>Role</th>
 
                                     <th>Reward Score</th>
 

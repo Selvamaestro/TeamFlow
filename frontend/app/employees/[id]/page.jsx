@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";import api from "@/lib/api";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
+import { getAvatarUrl } from "@/lib/utils";
 
 import {
     ArrowLeft,
@@ -124,7 +125,7 @@ const handleDeactivate = async () => {
                     <div className="employee-left">
 
                         <img
-                            src={employee.avatarUrl || "https://ui-avatars.com/api/?name=" + encodeURIComponent(employee.name)}
+                            src={getAvatarUrl(employee)}
                             alt={employee.name}
                             className="employee-image"
                         />

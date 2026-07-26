@@ -5,6 +5,8 @@ import api from "@/lib/api";
 import Link from "next/link";
 import "./dashboard.css";
 import Sidebar from "@/components/Sidebar";
+import Navbar from "@/components/Navbar";
+import { getAvatarUrl } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import {
     LayoutDashboard,
@@ -105,59 +107,11 @@ export default function Dashboard() {
             <div className="main-content">
 
                 {/* Header */}
-
-                <header className="header">
-
-                    <div className="search-box">
-
-                        <Search className="search-icon" size={18} />
-
-                        <input
-                            type="text"
-                            placeholder="Search enterprise data..."
-                        />
-
-                    </div>
-
-                    <div className="header-right">
-
-                        <div className="icons">
-                            <Bell size={20} />
-                        </div>
-
-                        <div className="icons help-tooltip-wrapper">
-                            <CircleHelp size={20} />
-                            <div className="help-tooltip-popover">
-                                Executive Dashboard — Real-time performance metrics, workforce attendance, financial summaries, and daily agenda.
-                            </div>
-                        </div>
-                        <Link href="/profile">
-                            <div
-                                className="profile"
-                                onClick={() => router.push("/profile")}
-                                style={{ cursor: "pointer" }}
-                            >
-                                <div className="profile-text">
-                                    <h4>{user?.name || "User"}</h4>
-                                    <span>{user?.role?.toUpperCase()}</span>
-                                </div>
-
-<img
-    src={
-        user?.avatarUrl
-            ? `http://localhost:5000${user.avatarUrl}`
-            : `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                  user?.name || "User"
-              )}`
-    }
-    alt={user?.name || "Profile"}
-/>
-                            </div>
-                        </Link>
-
-                    </div>
-
-                </header>
+                <Navbar
+                    user={user}
+                    placeholder="Search enterprise data..."
+                    helpText="Executive Dashboard — Real-time performance metrics, workforce attendance, financial summaries, and daily agenda."
+                />
 
                 {/* Dashboard */}
 

@@ -90,6 +90,17 @@ export default function Dashboard() {
         fetchDashboardData();
 
     }, []);
+    const handleLeaveDecision = async (id, status) => {
+        try {
+            await api.patch(`/leave/${id}/decision`, { status });
+            setLeaveRequests(prev =>
+                prev.map(leave => (leave._id === id || leave.id === id) ? { ...leave, status } : leave)
+            );
+        } catch (err) {
+            console.error("Failed to update leave decision from dashboard", err);
+        }
+    };
+
     if (loading) {
         return <h2>Loading Dashboard...</h2>;
     }
@@ -253,32 +264,32 @@ export default function Dashboard() {
 
                                 <div className="section-header">
                                     <h3>Pending Leave Requests</h3>
-                                    <button>View All</button>
+                                    <button onClick={() => router.push("/attendance")}>View All</button>
                                 </div>
-                                {leaveRequests.length === 0 ? (
+                                {leaveRequests.filter(l => l.status === "pending").length === 0 ? (
 
-                                    <p>No pending leave requests.</p>
+                                    <p style={{ padding: "10px 0", color: "#777" }}>No pending leave requests.</p>
 
                                 ) : (
 
-                                    leaveRequests.slice(0, 2).map((leave) => (
+                                    leaveRequests.filter(l => l.status === "pending").slice(0, 2).map((leave) => (
 
-                                        <div className="leave-card" key={leave._id}>
+                                        <div className="leave-card" key={leave._id || leave.id}>
 
                                             <div className="leave-info">
 
                                                 <div className="avatar">
 
-                                                    {leave.user?.name?.charAt(0)}
+                                                    {leave.user?.name ? leave.user.name.split(" ").map(n => n[0]).join("").toUpperCase() : "L"}
 
                                                 </div>
 
                                                 <div>
 
-                                                    <h4>{leave.user?.name}</h4>
+                                                    <h4>{leave.user?.name || "Employee"}</h4>
 
                                                     <p>
-                                                        {leave.type} • {new Date(leave.startDate).toLocaleDateString()}
+                                                        {leave.type} • {leave.startDate ? new Date(leave.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}
                                                     </p>
 
                                                 </div>
@@ -286,15 +297,20 @@ export default function Dashboard() {
                                             </div>
 
                                             <div className="leave-buttons">
-
-                                                <button className="approve">
-                                                    Approve
-                                                </button>
-
-                                                <button className="reject">
-                                                    Reject
-                                                </button>
-
+                                                {leave.status === "approved" ? (
+                                                    <span className="badge green">Approved</span>
+                                                ) : leave.status === "rejected" ? (
+                                                    <span className="badge yellow" style={{ background: "#ffeaea", color: "#d63031" }}>Rejected</span>
+                                                ) : (
+                                                    <>
+                                                        <button className="approve" onClick={() => handleLeaveDecision(leave._id || leave.id, "approved")}>
+                                                            Approve
+                                                        </button>
+                                                        <button className="reject" onClick={() => handleLeaveDecision(leave._id || leave.id, "rejected")}>
+                                                            Reject
+                                                        </button>
+                                                    </>
+                                                )}
                                             </div>
 
                                         </div>
@@ -305,11 +321,9 @@ export default function Dashboard() {
                             </div>
                             <div className="overview-card">
 
-
-
                                 <div className="section-header">
                                     <h3>Project Progress</h3>
-                                    <button>View All</button>
+                                    <button onClick={() => router.push("/projects")}>View All</button>
                                 </div>
 
                                 {projects.length === 0 ? (

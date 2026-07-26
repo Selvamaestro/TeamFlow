@@ -14,6 +14,7 @@ export default function Navbar({
     helpText = "TeamFlow Enterprise Suite — Manage workspace data, active projects, workforce metrics, and performance insights."
 }) {
     const [user, setUser] = useState(propUser || null);
+    const [unreadCount, setUnreadCount] = useState(0);
 
     useEffect(() => {
         if (propUser) {
@@ -46,12 +47,40 @@ export default function Navbar({
         fetchUser();
     }, [propUser]);
 
+    useEffect(() => {
+        api.get("/notifications")
+            .then(res => {
+                const list = res.data?.notifications || [];
+                setUnreadCount(list.filter(n => !n.read).length);
+            })
+            .catch(() => null);
+    }, []);
+
     return (
         <header className="topbar">
             <div className="header-right">
-                <div className="icons" title="Notifications">
+                <Link href="/notification" className="icons" title="Notifications" style={{ textDecoration: "none", color: "inherit", position: "relative" }}>
                     <Bell size={20} />
-                </div>
+                    {unreadCount > 0 && (
+                        <span style={{
+                            position: "absolute",
+                            top: "-4px",
+                            right: "-4px",
+                            background: "#ef4444",
+                            color: "white",
+                            fontSize: "10px",
+                            fontWeight: "bold",
+                            borderRadius: "50%",
+                            width: "16px",
+                            height: "16px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                        }}>
+                            {unreadCount > 9 ? "9+" : unreadCount}
+                        </span>
+                    )}
+                </Link>
 
                 <div className="icons help-tooltip-wrapper">
                     <CircleHelp size={20} />

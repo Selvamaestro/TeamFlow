@@ -54,6 +54,7 @@ export default function ProjectDetailPage({ params }) {
     const [dbProject, setDbProject] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
 
     // Document Upload & Delete state
     const [isUploadingDoc, setIsUploadingDoc] = useState(false);
@@ -123,16 +124,16 @@ export default function ProjectDetailPage({ params }) {
         selectedMembers: []
     });
 
-    const handleDeleteProject = async () => {
+    const handleConfirmDeleteProject = async () => {
         if (!dbProject) return;
-        if (confirm(`Are you sure you want to delete project "${dbProject.title}" permanently from MongoDB database?`)) {
-            setIsDeleting(true);
-            try {
-                await projectService.deleteProject(dbProject.id);
-            } catch (err) {
-                console.warn("Delete project notice:", err.message);
-            }
+        setIsDeleting(true);
+        try {
+            await projectService.deleteProject(dbProject.id);
             router.push("/projects");
+        } catch (err) {
+            console.warn("Delete project notice:", err.message);
+            setIsDeleting(false);
+            setShowDeleteModal(false);
         }
     };
 
@@ -487,11 +488,11 @@ export default function ProjectDetailPage({ params }) {
                                         <Edit size={16} /> Edit Project &amp; Employees
                                     </button>
                                     <button
-                                        onClick={handleDeleteProject}
+                                        onClick={() => setShowDeleteModal(true)}
                                         disabled={isDeleting}
                                         style={{ background: "#ba1a1a", color: "#fff", border: "none", borderRadius: "10px", padding: "10px 18px", fontWeight: "bold", fontSize: "14px", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
                                     >
-                                        <Trash2 size={16} /> {isDeleting ? "Deleting..." : "Delete Project"}
+                                        <Trash2 size={16} /> Delete Project
                                     </button>
                                 </div>
                             </div>
@@ -1057,6 +1058,90 @@ export default function ProjectDetailPage({ params }) {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Custom Delete Confirmation Popup Modal */}
+            {showDeleteModal && dbProject && (
+                <div style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: "rgba(0, 0, 0, 0.5)",
+                    backdropFilter: "blur(4px)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    zIndex: 9999,
+                    padding: "20px"
+                }}>
+                    <div style={{
+                        background: "#ffffff",
+                        borderRadius: "16px",
+                        padding: "28px",
+                        maxWidth: "440px",
+                        width: "100%",
+                        boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+                        textAlign: "center"
+                    }}>
+                        <div style={{
+                            width: "52px",
+                            height: "52px",
+                            borderRadius: "50%",
+                            background: "#fee2e2",
+                            color: "#dc2626",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            margin: "0 auto 16px"
+                        }}>
+                            <Trash2 size={26} />
+                        </div>
+                        <h3 style={{ fontSize: "20px", fontWeight: "700", color: "#0f172a", marginBottom: "10px" }}>
+                            Delete Project
+                        </h3>
+                        <p style={{ fontSize: "15px", color: "#475569", marginBottom: "24px", lineHeight: "1.5" }}>
+                            Do you want to delete the <strong>{dbProject.title}</strong>?
+                        </p>
+                        <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+                            <button
+                                onClick={() => setShowDeleteModal(false)}
+                                disabled={isDeleting}
+                                style={{
+                                    flex: 1,
+                                    padding: "10px 20px",
+                                    borderRadius: "10px",
+                                    border: "1px solid #cbd5e1",
+                                    background: "#ffffff",
+                                    color: "#334155",
+                                    fontWeight: "600",
+                                    fontSize: "14px",
+                                    cursor: isDeleting ? "not-allowed" : "pointer"
+                                }}
+                            >
+                                No
+                            </button>
+                            <button
+                                onClick={handleConfirmDeleteProject}
+                                disabled={isDeleting}
+                                style={{
+                                    flex: 1,
+                                    padding: "10px 20px",
+                                    borderRadius: "10px",
+                                    border: "none",
+                                    background: "#dc2626",
+                                    color: "#ffffff",
+                                    fontWeight: "600",
+                                    fontSize: "14px",
+                                    cursor: isDeleting ? "not-allowed" : "pointer"
+                                }}
+                            >
+                                {isDeleting ? "Deleting..." : "Yes"}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

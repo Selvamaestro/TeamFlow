@@ -28,6 +28,7 @@ const projectSchema = new mongoose.Schema(
         "on_hold",
         "completed",
         "cancelled",
+        "archived",
       ],
       default: "planning",
     },

@@ -41,6 +41,8 @@ export default function ProjectsPage() {
 
     // Live MongoDB Projects state
     const [projects, setProjects] = useState([]);
+    const [projectToDelete, setProjectToDelete] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
     const router = useRouter();
 
     // Fetch live projects and clients from MongoDB database
@@ -113,16 +115,57 @@ export default function ProjectsPage() {
         fetchDbProjects();
     }, []);
 
-    const handleDeleteProject = async (e, projectId, projectTitle) => {
+    const handleArchiveProject = async (e, projectId, projectTitle) => {
         e.preventDefault();
         e.stopPropagation();
-        if (confirm(`Are you sure you want to delete project "${projectTitle}" permanently from MongoDB database?`)) {
-            try {
-                await projectService.deleteProject(projectId);
-                setProjects(prev => prev.filter(p => p.id !== projectId));
-            } catch (err) {
-                console.warn("Delete project notice:", err.message);
-            }
+        try {
+            await projectService.updateProject(projectId, { status: "archived" });
+            setProjects(prev =>
+                prev.map(p =>
+                    p.id === projectId
+                        ? { ...p, category: "archived", status: "Archived", statusType: "yellow" }
+                        : p
+                )
+            );
+        } catch (err) {
+            console.warn("Archive project notice:", err.message);
+        }
+    };
+
+    const handleRestoreProject = async (e, projectId, projectTitle) => {
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+            await projectService.updateProject(projectId, { status: "in_progress" });
+            setProjects(prev =>
+                prev.map(p =>
+                    p.id === projectId
+                        ? { ...p, category: "active", status: "In Progress", statusType: "blue" }
+                        : p
+                )
+            );
+        } catch (err) {
+            console.warn("Restore project notice:", err.message);
+        }
+    };
+
+    const handleOpenDeleteModal = (e, projectId, projectTitle) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setProjectToDelete({ id: projectId, title: projectTitle });
+    };
+
+    const handleConfirmDeleteProject = async () => {
+        if (!projectToDelete) return;
+        setIsDeleting(true);
+        try {
+            await projectService.deleteProject(projectToDelete.id);
+            setProjects(prev => prev.filter(p => p.id !== projectToDelete.id));
+        } catch (err) {
+            console.warn("Delete project notice:", err.message);
+        } finally {
+            setIsDeleting(false);
+            setProjectToDelete(null);
         }
     };
 
@@ -187,6 +230,9 @@ export default function ProjectsPage() {
                                     >
                                         <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                                             <Archive size={18} /> Archived
+                                        </span>
+                                        <span className="badge yellow" style={{ fontSize: "11px", padding: "2px 8px", background: "#fef3c7", color: "#d97706" }}>
+                                            {projects.filter(p => p.category === "archived").length}
                                         </span>
                                     </div>
                                 </li>
@@ -266,8 +312,25 @@ export default function ProjectsPage() {
                                                 <Calendar size={15} /> {p.dueDate}
                                             </div>
                                             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                                {p.category === "active" ? (
+                                                    <button
+                                                        onClick={(e) => handleArchiveProject(e, p.id, p.title)}
+                                                        title="Archive Project"
+                                                        style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", padding: "4px", display: "flex", alignItems: "center" }}
+                                                    >
+                                                        <Archive size={16} />
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={(e) => handleRestoreProject(e, p.id, p.title)}
+                                                        title="Restore Project to Active"
+                                                        style={{ background: "none", border: "none", color: "#169c52", cursor: "pointer", padding: "4px", display: "flex", alignItems: "center" }}
+                                                    >
+                                                        <Folder size={16} />
+                                                    </button>
+                                                )}
                                                 <button
-                                                    onClick={(e) => handleDeleteProject(e, p.id, p.title)}
+                                                    onClick={(e) => handleOpenDeleteModal(e, p.id, p.title)}
                                                     title="Delete Project"
                                                     style={{ background: "none", border: "none", color: "#d63031", cursor: "pointer", padding: "4px", display: "flex", alignItems: "center" }}
                                                 >
@@ -309,6 +372,90 @@ export default function ProjectsPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Custom Delete Confirmation Popup Modal */}
+            {projectToDelete && (
+                <div style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: "rgba(0, 0, 0, 0.5)",
+                    backdropFilter: "blur(4px)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    zIndex: 9999,
+                    padding: "20px"
+                }}>
+                    <div style={{
+                        background: "#ffffff",
+                        borderRadius: "16px",
+                        padding: "28px",
+                        maxWidth: "440px",
+                        width: "100%",
+                        boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+                        textAlign: "center"
+                    }}>
+                        <div style={{
+                            width: "52px",
+                            height: "52px",
+                            borderRadius: "50%",
+                            background: "#fee2e2",
+                            color: "#dc2626",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            margin: "0 auto 16px"
+                        }}>
+                            <Trash2 size={26} />
+                        </div>
+                        <h3 style={{ fontSize: "20px", fontWeight: "700", color: "#0f172a", marginBottom: "10px" }}>
+                            Delete Project
+                        </h3>
+                        <p style={{ fontSize: "15px", color: "#475569", marginBottom: "24px", lineHeight: "1.5" }}>
+                            Do you want to delete the <strong>{projectToDelete.title}</strong>?
+                        </p>
+                        <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+                            <button
+                                onClick={() => setProjectToDelete(null)}
+                                disabled={isDeleting}
+                                style={{
+                                    flex: 1,
+                                    padding: "10px 20px",
+                                    borderRadius: "10px",
+                                    border: "1px solid #cbd5e1",
+                                    background: "#ffffff",
+                                    color: "#334155",
+                                    fontWeight: "600",
+                                    fontSize: "14px",
+                                    cursor: isDeleting ? "not-allowed" : "pointer"
+                                }}
+                            >
+                                No
+                            </button>
+                            <button
+                                onClick={handleConfirmDeleteProject}
+                                disabled={isDeleting}
+                                style={{
+                                    flex: 1,
+                                    padding: "10px 20px",
+                                    borderRadius: "10px",
+                                    border: "none",
+                                    background: "#dc2626",
+                                    color: "#ffffff",
+                                    fontWeight: "600",
+                                    fontSize: "14px",
+                                    cursor: isDeleting ? "not-allowed" : "pointer"
+                                }}
+                            >
+                                {isDeleting ? "Deleting..." : "Yes"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

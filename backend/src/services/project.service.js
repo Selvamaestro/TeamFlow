@@ -85,11 +85,11 @@ async function createProject(creator, data) {
     }
   }
 
-  // Every CEO and Manager is auto-enrolled as a project member (not just a chat
-  // participant) so they show up in the assigned-members list for every project,
-  // in addition to whichever members were explicitly selected.
-  const adminIds = (await conversationService.getAdminUserIds()).map(String);
-  const memberSet = new Set([...(Array.isArray(members) ? members : []).map(String), ...adminIds]);
+  // Only include explicitly selected members and creator manager (if present)
+  const memberSet = new Set([...(Array.isArray(members) ? members : []).map(String)]);
+  if (creator && creator.id) {
+    memberSet.add(String(creator.id));
+  }
 
   const project = await Project.create({
     title,

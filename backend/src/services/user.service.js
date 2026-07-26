@@ -176,7 +176,6 @@ async function createUser(data) {
   await conversationService.addUserToGlobalChannel(user._id);
   if (conversationService.ADMIN_ROLES.includes(user.role)) {
     await conversationService.addUserToAllProjectGroups(user._id);
-    await conversationService.addUserToAllProjectsAsMember(user._id);
   }
 
   return user;

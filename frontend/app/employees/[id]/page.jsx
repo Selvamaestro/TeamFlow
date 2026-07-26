@@ -123,11 +123,17 @@ const handleDeactivate = async () => {
 
                     <div className="employee-left">
 
-                        <img
-                            src={employee.avatarUrl || "https://ui-avatars.com/api/?name=" + encodeURIComponent(employee.name)}
-                            alt={employee.name}
-                            className="employee-image"
-                        />
+<img
+  className="employee-avatar"
+  src={
+    employee?.avatarUrl
+      ? `http://localhost:5000${employee.avatarUrl}`
+      : `https://ui-avatars.com/api/?name=${encodeURIComponent(
+          employee?.name || "User"
+        )}`
+  }
+  alt={employee?.name || "Profile"}
+/>
 
                         <div className="employee-info">
 

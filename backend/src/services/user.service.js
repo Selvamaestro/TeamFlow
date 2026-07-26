@@ -2,6 +2,7 @@ const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const Project = require("../models/Project");
 const Attendance = require("../models/Attendance");
+const { calculateEmployeeAttendance } = require("./attendance.service");
 const Reward = require("../models/Reward");
 const conversationService = require("./conversation.service");
 
@@ -50,12 +51,7 @@ async function listUsers(viewerRole, { department, role, status, search, page = 
       members: user._id,
     });
 
-    // Count attendance records
-    const attendanceCount = await Attendance.countDocuments({
-      user: user._id,
-      status: "present",
-    });
-
+const attendanceSummary = await calculateEmployeeAttendance(user._id);
     // Calculate total reward points
     const rewards = await Reward.find({
       user: user._id,
@@ -66,12 +62,12 @@ async function listUsers(viewerRole, { department, role, status, search, page = 
       0
     );
 
-    return {
-      ...user.toObject(),
-      currentProject: project?.title || "-",
-      attendance: attendanceCount,
-      rewardScore,
-    };
+return {
+  ...user.toObject(),
+  currentProject: project?.title || "-",
+  rewardScore,
+  attendanceSummary,
+};
   })
 );
 

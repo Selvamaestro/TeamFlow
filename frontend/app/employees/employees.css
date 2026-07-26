@@ -581,3 +581,85 @@ SMALL SCREEN
     }
 
 }
+.advanced-filters{
+    display:flex;
+    align-items:center;
+    gap:20px;
+    padding:18px 0;
+    border-top:1px solid #eee;
+    margin-top:18px;
+}
+
+.advanced-filters label{
+    font-weight:600;
+    color:#002045;
+}
+
+.advanced-filters select{
+    padding:10px 16px;
+    border:1px solid #ddd;
+    border-radius:8px;
+    background:#fff;
+}
+
+.filter-btn{
+    background:#002045;
+    color:white;
+    border:none;
+    padding:10px 18px;
+    border-radius:8px;
+    cursor:pointer;
+}
+
+.filter-btn:hover{
+    background:#1d3557;
+}
+.attendance-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.attendance-status {
+  font-weight: 600;
+  color: #16a34a;
+}
+
+.attendance-days {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.attendance-percent {
+  font-weight: 600;
+  color: #2563eb;
+}
+
+.attendance-trend {
+  font-size: 12px;
+  color: #10b981;
+}.attendance-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.attendance-status {
+  font-weight: 600;
+  color: #16a34a;
+}
+
+.attendance-days {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.attendance-percent {
+  font-weight: 600;
+  color: #2563eb;
+}
+
+.attendance-trend {
+  font-size: 12px;
+  color: #10b981;
+}

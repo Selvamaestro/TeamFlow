@@ -16,41 +16,13 @@ import {
     Palette,
 } from "lucide-react";
 
-const departments = [
-    {
-        id: 1,
-        icon: <Cpu size={24} />,
-        title: "Engineering",
-        members: 42,
-        code: "DEPT_01",
-    },
-    {
-        id: 2,
-        icon: <Users size={24} />,
-        title: "HR",
-        members: 12,
-        code: "DEPT_02",
-    },
-    {
-        id: 3,
-        icon: <TrendingUp size={24} />,
-        title: "Sales",
-        members: 28,
-        code: "DEPT_03",
-    },
-    {
-        id: 4,
-        icon: <Palette size={24} />,
-        title: "Design",
-        members: 15,
-        code: "DEPT_04",
-    },
-];
+
 
 export default function EmployeesPage() {
     const [employees, setEmployees] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
+    const [projects, setProjects] = useState([]);
     const [roleFilter, setRoleFilter] =
         useState("All Roles");
     const [currentPage, setCurrentPage] = useState(1);
@@ -59,10 +31,15 @@ export default function EmployeesPage() {
 
     const fetchEmployees = async () => {
         try {
-            const response = await api.get("/users");
+            const [userResponse, projectResponse] = await Promise.all([
+                api.get("/users"),
+                api.get("/projects"),
+            ]);
 
-            setEmployees(response.data.users);
-            console.log(response.data.users);
+            setEmployees(userResponse.data.users);
+            setProjects(projectResponse.data.projects);
+            console.log(userResponse.data.users);
+            console.log(projectResponse.data.projects);
         } catch (error) {
             console.error("Failed to fetch employees", error);
         } finally {
@@ -73,27 +50,68 @@ export default function EmployeesPage() {
         fetchEmployees();
     }, []);
     const filteredEmployees = useMemo(() => {
-return employees.filter((employee) => {
+        return employees.filter((employee) => {
 
-    if (employee.status !== "active") return false;
+            if (employee.status !== "active") return false;
 
-    const searchText = search.toLowerCase();
+            const searchText = search.toLowerCase();
 
-    const matchesSearch =
-        employee.name?.toLowerCase().includes(searchText) ||
-        employee.email?.toLowerCase().includes(searchText) ||
-        employee.department?.toLowerCase().includes(searchText) ||
-        employee.role?.toLowerCase().includes(searchText) ||
-        employee.currentProject?.toLowerCase().includes(searchText);
+            const matchesSearch =
+                employee.name?.toLowerCase().includes(searchText) ||
+                employee.email?.toLowerCase().includes(searchText) ||
+                employee.department?.toLowerCase().includes(searchText) ||
+                employee.role?.toLowerCase().includes(searchText) ||
+                employee.currentProject?.toLowerCase().includes(searchText);
 
-    const matchesRole =
-        roleFilter === "All Roles" ||
-        employee.role === roleFilter;
+            const matchesRole =
+                roleFilter === "All Roles" ||
+                employee.role === roleFilter;
 
-    return matchesSearch && matchesRole;
+            return matchesSearch && matchesRole;
 
-});
+        });
     }, [employees, search, roleFilter]);
+    const departmentIcons = {
+        Engineering: <Cpu size={24} />,
+        HR: <Users size={24} />,
+        Projects: <TrendingUp size={24} />,
+        Design: <Palette size={24} />,
+    };
+
+    const departments = useMemo(() => {
+        const counts = {};
+
+        employees.forEach((employee) => {
+            if (employee.status !== "active") return;
+
+            const dept = employee.department || "Others";
+            counts[dept] = (counts[dept] || 0) + 1;
+        });
+
+        const departmentCards = Object.entries(counts).map(
+            ([name, members], index) => ({
+                id: index + 1,
+                title: name,
+                members,
+                label: "Members",
+                code: `DEPT_${String(index + 1).padStart(2, "0")}`,
+                icon: departmentIcons[name] || <Users size={24} />,
+            })
+        );
+
+        departmentCards.push({
+            id: 999,
+            title: "Projects",
+            members: projects.filter(
+                (project) => project.status !== "completed"
+            ).length,
+            label: "Active Projects",
+            code: "PROJ",
+            icon: <TrendingUp size={24} />,
+        });
+
+        return departmentCards;
+    }, [employees, projects]);
     const totalPages = Math.ceil(filteredEmployees.length / employeesPerPage);
 
     const indexOfLastEmployee = currentPage * employeesPerPage;
@@ -213,11 +231,7 @@ return employees.filter((employee) => {
 
                                 </h2>
 
-                                <p>
-
-                                    Members
-
-                                </p>
+                                <p>{dept.label}</p>
 
                             </div>
 
@@ -318,25 +332,27 @@ return employees.filter((employee) => {
 
                                         <td>{employee.rewardScore}</td>
 
-                                        <td>
+<td>
+  <div className="attendance-info">
+    <div className="attendance-status">
+      {employee.attendanceSummary?.todayStatus}
+      {employee.attendanceSummary?.checkInTime &&
+        ` (${employee.attendanceSummary.checkInTime})`}
+    </div>
 
-                                            <div className="progress-wrapper">
+    <div className="attendance-days">
+      {employee.attendanceSummary?.presentDays}
+    </div>
 
-                                                <span>{employee.attendance}</span>
-                                                <div className="progress">
+    <div className="attendance-percent">
+      {employee.attendanceSummary?.percentage}%
+    </div>
 
-                                                    <div
-                                                        className="progress-fill"
-                                                        style={{
-                                                            width: "0%",
-                                                        }}
-                                                    />
-
-                                                </div>
-
-                                            </div>
-
-                                        </td>
+    <div className="attendance-trend">
+      {employee.attendanceSummary?.trend}
+    </div>
+  </div>
+</td>
 
                                         <td>
 

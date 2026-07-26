@@ -79,7 +79,88 @@ async function listAttendance(requestingUser, { userId, department, date } = {})
 
   return Attendance.find(filter).populate("user", "name employeeId department").sort({ date: -1 });
 }
+async function calculateEmployeeAttendance(userId) {
 
+  const now = new Date();
+
+  const today = startOfDay(now);
+
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const totalDaysPassed = now.getDate();
+
+  const startOfMonth = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    1
+  );
+
+  // Today's attendance
+  const todayRecord = await Attendance.findOne({
+    user: userId,
+    date: {
+      $gte: today,
+      $lt: tomorrow,
+    },
+  });
+
+  // Monthly attendance
+  const monthlyRecords = await Attendance.find({
+    user: userId,
+    date: {
+      $gte: startOfMonth,
+      $lt: tomorrow,
+    },
+    status: {
+      $in: ["present", "half_day", "leave"],
+    },
+  });
+
+  let presentCount = 0;
+
+  monthlyRecords.forEach((record) => {
+    presentCount +=
+      record.status === "half_day"
+        ? 0.5
+        : 1;
+  });
+
+  const percentage =
+    totalDaysPassed > 0
+      ? Math.round((presentCount / totalDaysPassed) * 100)
+      : 100;
+
+  const trend =
+    percentage >= 85
+      ? `+${percentage - 85}%`
+      : `${percentage - 85}%`;
+
+  return {
+    todayStatus:
+      todayRecord
+        ? todayRecord.status === "half_day"
+          ? "Half Day"
+          : "Present"
+        : "Absent",
+
+    checkInTime:
+      todayRecord?.checkIn
+        ? new Date(
+            todayRecord.checkIn
+          ).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : null,
+
+    presentDays: `${presentCount} / ${totalDaysPassed} days`,
+
+    percentage,
+
+    trend,
+  };
+}
 async function getAttendanceSummary() {
   const now = new Date();
   const today = startOfDay(now);
@@ -188,7 +269,7 @@ module.exports = {
   myAttendance,
   listAttendance,
   getAttendanceSummary,
+  calculateEmployeeAttendance,
   AlreadyCheckedInError,
   NoCheckInFoundError,
 };
-

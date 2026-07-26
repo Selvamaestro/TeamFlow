@@ -230,13 +230,16 @@ console.log(user);
                                 <span>{user?.role?.toUpperCase()}</span>
                             </div>
 
-                            <img
-                                src={
-                                    user?.avatarUrl ||
-                                    `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || "User")}`
-                                }
-                                alt={user?.name || "Profile"}
-                            />
+                                <img
+                                    src={
+                                        user?.avatarUrl
+                                            ? `http://localhost:5000${user.avatarUrl}`
+                                            : `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                                user?.name || "User"
+                                            )}`
+                                    }
+                                    alt={user?.name || "Profile"}
+                                />
 
                         </div>
 

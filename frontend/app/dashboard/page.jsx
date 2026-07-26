@@ -94,7 +94,7 @@ export default function Dashboard() {
     if (loading) {
         return <h2>Loading Dashboard...</h2>;
     }
-
+    console.log("Agenda from API:", agenda);
     return (
         <div className="dashboard-container">
             {/* ================= Sidebar ================= */}
@@ -120,10 +120,11 @@ export default function Dashboard() {
                     </div>
 
                     <div className="header-right">
-
-                        <div className="icons">
-                            <Bell size={20} />
-                        </div>
+<Link href="/notifications">
+    <div className="icons">
+        <Bell size={20} />
+    </div>
+</Link>
 
                         <div className="icons help-tooltip-wrapper">
                             <CircleHelp size={20} />
@@ -142,16 +143,16 @@ export default function Dashboard() {
                                     <span>{user?.role?.toUpperCase()}</span>
                                 </div>
 
-<img
-    src={
-        user?.avatarUrl
-            ? `http://localhost:5000${user.avatarUrl}`
-            : `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                  user?.name || "User"
-              )}`
-    }
-    alt={user?.name || "Profile"}
-/>
+                                <img
+                                    src={
+                                        user?.avatarUrl
+                                            ? `http://localhost:5000${user.avatarUrl}`
+                                            : `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                                user?.name || "User"
+                                            )}`
+                                    }
+                                    alt={user?.name || "Profile"}
+                                />
                             </div>
                         </Link>
 
@@ -497,10 +498,16 @@ export default function Dashboard() {
                                         agenda
                                             .filter((event) => {
 
-                                                const today = new Date().toDateString();
+                                                console.log("Event Date:", event.date);
+                                                console.log("Today:", new Date().toDateString());
+                                                console.log(
+                                                    "Converted:",
+                                                    new Date(event.date).toDateString()
+                                                );
 
                                                 return (
-                                                    new Date(event.date).toDateString() === today
+                                                    new Date(event.date).toDateString() ===
+                                                    new Date().toDateString()
                                                 );
 
                                             })

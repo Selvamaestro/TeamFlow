@@ -69,7 +69,9 @@ export default function ProfilePage() {
 
             await api.post("/agenda", eventData);
 
-            fetchAgenda();
+await fetchAgenda();
+
+alert("Event added successfully!");
 
             setEventData({
                 title: "",
@@ -85,21 +87,19 @@ export default function ProfilePage() {
             console.error(err);
         }
     };
-    const handleDelete = async (id) => {
+const handleDelete = async (id) => {
+    try {
+        await api.delete(`/agenda/${id}`);
 
-        try {
+        await fetchAgenda();
 
-            await api.delete(`/agenda/${id}`);
+        alert("Event deleted successfully!");
 
-            fetchAgenda();
-
-        } catch (err) {
-
-            console.error(err);
-
-        }
-
-    };
+    } catch (err) {
+        console.error(err);
+        alert("Failed to delete event");
+    }
+};
     const handlePasswordChange = async () => {
 
         if (
@@ -166,8 +166,11 @@ const uploadProfileImage = async () => {
         console.log("Uploaded User:", response.data.user);
         console.log("Avatar URL:", response.data.user.avatarUrl);
 
-        setUser(response.data.user);
-        setSelectedImage(null);
+        const profile = await authService.getProfile();
+
+setUser(profile.data.user);
+
+setSelectedImage(null);
 
         alert("Profile picture updated!");
 
@@ -179,7 +182,16 @@ const uploadProfileImage = async () => {
     }
 
 };
+        const fetchAgenda = async () => {
+            try {
+                const response = await api.get("/agenda");
 
+                setEvents(response.data.agenda);
+
+            } catch (err) {
+                console.error(err);
+            }
+        };
     useEffect(() => {
         const fetchProfile = async () => {
             try {
@@ -192,16 +204,6 @@ const uploadProfileImage = async () => {
                 });
             } catch (error) {
                 console.error("Failed to fetch profile:", error);
-            }
-        };
-        const fetchAgenda = async () => {
-            try {
-                const response = await api.get("/agenda");
-
-                setEvents(response.data.agenda);
-
-            } catch (err) {
-                console.error(err);
             }
         };
 
@@ -584,8 +586,11 @@ const uploadProfileImage = async () => {
 
                                             <span>
 
-                                                {event.date} • {event.time}
-
+{new Date(event.date).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+})} • {event.time}
                                             </span>
 
                                             <p>{event.description}</p>

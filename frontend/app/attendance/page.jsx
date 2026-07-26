@@ -7,6 +7,7 @@ import "./attendance.css";
 import Sidebar from "@/components/Sidebar";
 import Navbar from "@/components/Navbar";
 import api from "@/lib/api";
+import { getAvatarUrl } from "@/lib/utils";
 import {
     Search,
     Bell,
@@ -20,7 +21,9 @@ import {
     Clock,
     UserCheck,
     UserX,
-    Users
+    Users,
+    ChevronLeft,
+    ChevronRight
 } from "lucide-react";
 
 export default function AttendancePage() {
@@ -41,6 +44,161 @@ export default function AttendancePage() {
         presentEmployees: [],
         absentEmployees: []
     });
+
+    // Employee Attendance Calendar Modal state
+    const [showCalendarModal, setShowCalendarModal] = useState(false);
+    const [selectedEmpCalendar, setSelectedEmpCalendar] = useState(null);
+    const [empAttendanceLogs, setEmpAttendanceLogs] = useState([]);
+    const [calendarYear, setCalendarYear] = useState(2026);
+    const [calendarMonth, setCalendarMonth] = useState(6); // 0-indexed: 6 = July
+    const [loadingCalendar, setLoadingCalendar] = useState(false);
+
+    const monthNames = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ];
+
+    const handleEmployeeClick = async (emp) => {
+        try {
+            setSelectedEmpCalendar(emp);
+            setLoadingCalendar(true);
+            setShowCalendarModal(true);
+
+            const now = new Date();
+            setCalendarYear(now.getFullYear());
+            setCalendarMonth(now.getMonth());
+
+            const targetId = emp.id || emp._id;
+            const res = await api.get(`/attendance?userId=${targetId}`).catch(err => {
+                console.error("Failed fetching attendance for user", err);
+                return { data: { records: [] } };
+            });
+
+            const logs = res.data?.records || res.data?.attendance || (Array.isArray(res.data) ? res.data : []);
+            setEmpAttendanceLogs(logs);
+        } catch (err) {
+            console.error("Failed to load employee attendance logs", err);
+        } finally {
+            setLoadingCalendar(false);
+        }
+    };
+
+    const handlePrevMonth = () => {
+        if (calendarMonth === 0) {
+            setCalendarMonth(11);
+            setCalendarYear(prev => prev - 1);
+        } else {
+            setCalendarMonth(prev => prev - 1);
+        }
+    };
+
+    const handleNextMonth = () => {
+        if (calendarMonth === 11) {
+            setCalendarMonth(0);
+            setCalendarYear(prev => prev + 1);
+        } else {
+            setCalendarMonth(prev => prev + 1);
+        }
+    };
+
+    const getCalendarData = () => {
+        if (!selectedEmpCalendar) return { days: [], firstDayIndex: 0, daysInMonth: 0, presentCount: 0, absentCount: 0, leaveCount: 0 };
+
+        const firstDayIndex = new Date(calendarYear, calendarMonth, 1).getDay();
+        const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
+
+        const todayDate = new Date();
+        const todayYear = todayDate.getFullYear();
+        const todayMonth = todayDate.getMonth();
+        const todayDay = todayDate.getDate();
+
+        let presentCount = 0;
+        let absentCount = 0;
+        let leaveCount = 0;
+
+        const getISTDate = (dateStr) => {
+            if (!dateStr) return null;
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return null;
+            const istMs = d.getTime() + (330 * 60 * 1000);
+            const ist = new Date(istMs);
+            return {
+                year: ist.getUTCFullYear(),
+                month: ist.getUTCMonth(),
+                day: ist.getUTCDate()
+            };
+        };
+
+        const isMatchingDay = (log, dayNum, month, year) => {
+            if (!log) return false;
+
+            if (log.checkIn) {
+                const ist = getISTDate(log.checkIn);
+                if (ist && ist.year === year && ist.month === month && ist.day === dayNum) {
+                    return true;
+                }
+            }
+
+            if (log.date) {
+                const ist = getISTDate(log.date);
+                if (ist && ist.year === year && ist.month === month && ist.day === dayNum) {
+                    return true;
+                }
+            }
+
+            return false;
+        };
+
+        const days = [];
+        for (let d = 1; d <= daysInMonth; d++) {
+            const isFuture = (calendarYear > todayYear) ||
+                (calendarYear === todayYear && calendarMonth > todayMonth) ||
+                (calendarYear === todayYear && calendarMonth === todayMonth && d > todayDay);
+
+            const logRec = empAttendanceLogs.find(log => isMatchingDay(log, d, calendarMonth, calendarYear));
+
+            let status = "future";
+            if (logRec) {
+                if (logRec.status === "leave") {
+                    status = "leave";
+                    leaveCount++;
+                } else if (logRec.status === "present" || logRec.status === "half_day" || logRec.checkIn) {
+                    let isCheckInBeforeNoon = true;
+                    if (logRec.checkIn) {
+                        const cDate = new Date(logRec.checkIn);
+                        const istMs = cDate.getTime() + (330 * 60 * 1000);
+                        const ist = new Date(istMs);
+                        const hour = ist.getUTCHours();
+                        const minute = ist.getUTCMinutes();
+                        isCheckInBeforeNoon = hour < 12 || (hour === 12 && minute === 0);
+                    }
+
+                    if (isCheckInBeforeNoon) {
+                        status = "present";
+                        presentCount++;
+                    } else {
+                        status = "absent";
+                        absentCount++;
+                    }
+                } else {
+                    status = "absent";
+                    absentCount++;
+                }
+            } else if (!isFuture) {
+                status = "absent";
+                absentCount++;
+            }
+
+            days.push({
+                dayNumber: d,
+                isFuture,
+                status,
+                logRec
+            });
+        }
+
+        return { days, firstDayIndex, daysInMonth, presentCount, absentCount, leaveCount };
+    };
 
     const [leaveRequests, setLeaveRequests] = useState([]);
 
@@ -343,7 +501,12 @@ export default function AttendancePage() {
                                     </tr>
                                 ) : (
                                     filteredEmployees.map((emp) => (
-                                        <tr key={emp.id}>
+                                        <tr
+                                            key={emp.id}
+                                            className="clickable-row"
+                                            onClick={() => handleEmployeeClick(emp)}
+                                            title="Click to view employee's monthly attendance calendar"
+                                        >
                                             <td style={{ fontWeight: "bold", color: "#002045" }}>
                                                 {emp.name}{" "}
                                                 <span style={{ fontWeight: "normal", color: "#777", fontSize: "12px", display: "block" }}>
@@ -459,7 +622,12 @@ export default function AttendancePage() {
                                 </p>
                             ) : (
                                 modalList.map((emp) => (
-                                    <div key={emp.id} className="modal-emp-card">
+                                    <div
+                                        key={emp.id}
+                                        className="modal-emp-card clickable-row"
+                                        onClick={() => handleEmployeeClick(emp)}
+                                        title="Click to view employee's monthly attendance calendar"
+                                    >
                                         <div className="modal-emp-info">
                                             <div className={`modal-emp-avatar ${modalTab === "absent" ? "absent-avatar" : ""}`}>
                                                 {emp.name ? emp.name.split(" ").map(n => n[0]).join("").toUpperCase() : "EMP"}
@@ -495,6 +663,156 @@ export default function AttendancePage() {
                     </div>
                 </div>
             )}
+
+            {/* Employee Monthly Attendance Calendar Modal */}
+            {showCalendarModal && selectedEmpCalendar && (() => {
+                const { days, firstDayIndex, presentCount, absentCount, leaveCount } = getCalendarData();
+                return (
+                    <div className="modal-backdrop" onClick={() => setShowCalendarModal(false)}>
+                        <div className="calendar-modal" onClick={(e) => e.stopPropagation()}>
+                            {/* Header Banner */}
+                            <div className="calendar-header-banner">
+                                <div className="calendar-header-info">
+                                    <img
+                                        src={getAvatarUrl(selectedEmpCalendar)}
+                                        alt={selectedEmpCalendar.name}
+                                        className="calendar-user-avatar"
+                                    />
+                                    <div className="calendar-user-details">
+                                        <h3>{selectedEmpCalendar.name}</h3>
+                                        <p>
+                                            {selectedEmpCalendar.role} • <span style={{ color: "#cbd5e1" }}>{selectedEmpCalendar.dept}</span> | Attendance: <strong style={{ color: "#4ade80" }}>{selectedEmpCalendar.percentage}%</strong> ({selectedEmpCalendar.presentDays})
+                                        </p>
+                                    </div>
+                                </div>
+                                <button className="calendar-header-close" onClick={() => setShowCalendarModal(false)}>
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            {/* Month Navigation */}
+                            <div className="calendar-month-nav">
+                                <button className="calendar-nav-btn" onClick={handlePrevMonth}>
+                                    <ChevronLeft size={16} /> Prev Month
+                                </button>
+                                <div className="calendar-month-title">
+                                    {monthNames[calendarMonth]} {calendarYear}
+                                </div>
+                                <button className="calendar-nav-btn" onClick={handleNextMonth}>
+                                    Next Month <ChevronRight size={16} />
+                                </button>
+                            </div>
+
+                            {/* Calendar Grid Body */}
+                            <div className="calendar-body">
+                                {loadingCalendar ? (
+                                    <p style={{ textAlign: "center", padding: "40px 0", color: "#64748b" }}>Loading attendance calendar...</p>
+                                ) : (
+                                    <>
+                                        {/* Day Headers */}
+                                        <div className="calendar-grid-header">
+                                            <div>Sun</div>
+                                            <div>Mon</div>
+                                            <div>Tue</div>
+                                            <div>Wed</div>
+                                            <div>Thu</div>
+                                            <div>Fri</div>
+                                            <div>Sat</div>
+                                        </div>
+
+                                        {/* Days Grid */}
+                                        <div className="calendar-grid-days">
+                                            {/* Empty leading cells */}
+                                            {Array.from({ length: firstDayIndex }).map((_, i) => (
+                                                <div key={`empty-${i}`} className="calendar-day-box day-empty" />
+                                            ))}
+
+                                            {/* Month days */}
+                                            {days.map((d, index) => {
+                                                const gridIndex = firstDayIndex + index;
+                                                const isFirstRow = gridIndex < 7;
+                                                const cellClass = d.status === "present"
+                                                    ? "day-present"
+                                                    : d.status === "absent"
+                                                        ? "day-absent"
+                                                        : d.status === "leave"
+                                                            ? "day-leave"
+                                                            : "day-future";
+
+                                                const statusLabel = d.status === "present"
+                                                    ? "Present"
+                                                    : d.status === "leave"
+                                                        ? "Approved Leave"
+                                                        : d.status === "absent"
+                                                            ? "Absent"
+                                                            : "Upcoming Date";
+
+                                                const checkInStr = d.logRec?.checkIn
+                                                    ? new Date(d.logRec.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                                    : null;
+
+                                                const fullTitle = `${statusLabel}${checkInStr ? ' • Check In: ' + checkInStr : ''}`;
+
+                                                return (
+                                                    <div
+                                                        key={d.dayNumber}
+                                                        className={`calendar-day-box ${cellClass} date-tooltip-wrapper`}
+                                                        title={fullTitle}
+                                                    >
+                                                        <span className="calendar-day-num">{d.dayNumber}</span>
+                                                        <div className="day-badge-icon">
+                                                            {d.status === "present" && <CheckCircle2 size={20} color="#169c52" />}
+                                                            {d.status === "absent" && <XCircle size={20} color="#d63031" />}
+                                                            {d.status === "leave" && <Clock size={18} color="#1d4ed8" />}
+                                                        </div>
+
+                                                        {/* Hover Popover Tooltip */}
+                                                        {!d.isFuture && (
+                                                            <div className={`date-tooltip-popover ${isFirstRow ? "tooltip-downward" : ""}`}>
+                                                                <div className="date-popover-header">
+                                                                    {monthNames[calendarMonth]} {d.dayNumber}, {calendarYear}
+                                                                </div>
+                                                                <div className={`date-popover-status ${d.status}`}>
+                                                                    {statusLabel}
+                                                                </div>
+                                                                {checkInStr && (
+                                                                    <div className="date-popover-time">
+                                                                        <Clock size={12} /> Check In: {checkInStr}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+
+                            {/* Legend Bar */}
+                            <div className="calendar-legend-bar">
+                                <div className="legend-item">
+                                    <span className="legend-dot green"></span>
+                                    <span>Present ({presentCount})</span>
+                                </div>
+                                <div className="legend-item">
+                                    <span className="legend-dot red"></span>
+                                    <span>Absent ({absentCount})</span>
+                                </div>
+                                <div className="legend-item">
+                                    <span className="legend-dot blue"></span>
+                                    <span>Leave ({leaveCount})</span>
+                                </div>
+                                <div className="legend-item">
+                                    <span className="legend-dot gray"></span>
+                                    <span>Upcoming</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 }

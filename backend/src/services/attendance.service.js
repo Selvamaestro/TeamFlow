@@ -22,15 +22,22 @@ class NoCheckInFoundError extends Error {
 }
 
 async function checkIn(userId) {
-  const today = startOfDay(new Date());
+  const now = new Date();
+  const today = startOfDay(now);
   const existing = await Attendance.findOne({ user: userId, date: today });
   if (existing) throw new AlreadyCheckedInError();
+
+  // Check-in cutoff rule: <= 12:00 PM is present, > 12:00 PM is absent
+  const checkInHour = now.getHours();
+  const checkInMinute = now.getMinutes();
+  const isPresent = checkInHour < 12 || (checkInHour === 12 && checkInMinute === 0);
+  const status = isPresent ? "present" : "absent";
 
   return Attendance.create({
     user: userId,
     date: today,
-    checkIn: new Date(),
-    status: "present",
+    checkIn: now,
+    status,
   });
 }
 
@@ -110,7 +117,16 @@ async function getAttendanceSummary() {
 
   const presentUserIds = new Set(
     todayRecords
-      .filter((r) => ["present", "half_day"].includes(r.status))
+      .filter((r) => {
+        if (r.status === "present") return true;
+        if (r.status === "half_day" || r.checkIn) {
+          const cDate = r.checkIn ? new Date(r.checkIn) : new Date(r.date);
+          const h = cDate.getHours();
+          const m = cDate.getMinutes();
+          return h < 12 || (h === 12 && m === 0);
+        }
+        return false;
+      })
       .map((r) => r.user.toString())
   );
 
@@ -127,7 +143,22 @@ async function getAttendanceSummary() {
   const userPresentCounts = {};
   monthlyRecords.forEach((r) => {
     const uid = r.user.toString();
-    userPresentCounts[uid] = (userPresentCounts[uid] || 0) + (r.status === "half_day" ? 0.5 : 1);
+    let isPres = false;
+    if (r.status === "present" || r.status === "leave") {
+      isPres = true;
+    } else if (r.status === "half_day") {
+      if (r.checkIn) {
+        const cDate = new Date(r.checkIn);
+        const h = cDate.getHours();
+        const m = cDate.getMinutes();
+        if (h < 12 || (h === 12 && m === 0)) isPres = true;
+      } else {
+        isPres = true;
+      }
+    }
+    if (isPres) {
+      userPresentCounts[uid] = (userPresentCounts[uid] || 0) + 1;
+    }
   });
 
   const presentEmployees = [];
@@ -143,7 +174,7 @@ async function getAttendanceSummary() {
     const todayRec = todayRecordMap[uid];
     const isPresent = presentUserIds.has(uid);
     const todayStatus = isPresent
-      ? (todayRec?.status === "half_day" ? "Half Day" : "Present")
+      ? "Present"
       : (todayRec?.status === "leave" ? "On Leave" : "Absent");
     const checkInTime = todayRec?.checkIn
       ? new Date(todayRec.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })

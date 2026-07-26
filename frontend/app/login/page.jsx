@@ -41,6 +41,12 @@ const handleLogin = async (e) => {
     });
 
     const { token, user } = response.data;
+    const allowedAdminRoles = ["manager", "hr", "ceo"];
+
+    if (!allowedAdminRoles.includes(user?.role?.toLowerCase())) {
+      setError("Access Denied: Only Manager, HR, and CEO roles are permitted to access the Admin Panel.");
+      return;
+    }
 
     localStorage.setItem("token", token);
     localStorage.setItem("teamflow_token", token);
@@ -203,7 +209,7 @@ const handleLogin = async (e) => {
                             <ShieldAlert size={18} />
 
                             <p>
-                                Admin / CEO Access Only
+                                Manager, HR & CEO Access Only
                             </p>
 
                         </div>

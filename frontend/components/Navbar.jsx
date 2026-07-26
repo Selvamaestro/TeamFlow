@@ -24,7 +24,20 @@ export default function Navbar({
         const fetchUser = async () => {
             try {
                 const response = await api.get("/auth/me");
-                setUser(response.data.user);
+                const currentUser = response.data.user;
+                const allowedAdminRoles = ["manager", "hr", "ceo"];
+
+                if (currentUser?.role && !allowedAdminRoles.includes(currentUser.role.toLowerCase())) {
+                    if (typeof window !== "undefined") {
+                        localStorage.removeItem("token");
+                        localStorage.removeItem("teamflow_token");
+                        localStorage.removeItem("user");
+                        window.location.href = "/login";
+                    }
+                    return;
+                }
+
+                setUser(currentUser);
             } catch (error) {
                 console.error("Navbar user fetch error:", error);
             }

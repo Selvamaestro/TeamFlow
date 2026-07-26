@@ -85,11 +85,8 @@ async function createProject(creator, data) {
     }
   }
 
-  // Only include explicitly selected members and creator manager (if present)
+  // Strictly include only the explicitly selected members
   const memberSet = new Set([...(Array.isArray(members) ? members : []).map(String)]);
-  if (creator && creator.id) {
-    memberSet.add(String(creator.id));
-  }
 
   const project = await Project.create({
     title,

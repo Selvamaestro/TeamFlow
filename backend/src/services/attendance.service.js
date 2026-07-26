@@ -27,17 +27,11 @@ async function checkIn(userId) {
   const existing = await Attendance.findOne({ user: userId, date: today });
   if (existing) throw new AlreadyCheckedInError();
 
-  // Check-in cutoff rule: <= 12:00 PM is present, > 12:00 PM is absent
-  const checkInHour = now.getHours();
-  const checkInMinute = now.getMinutes();
-  const isPresent = checkInHour < 12 || (checkInHour === 12 && checkInMinute === 0);
-  const status = isPresent ? "present" : "absent";
-
   return Attendance.create({
     user: userId,
     date: today,
     checkIn: now,
-    status,
+    status: "present",
   });
 }
 
@@ -117,16 +111,7 @@ async function getAttendanceSummary() {
 
   const presentUserIds = new Set(
     todayRecords
-      .filter((r) => {
-        if (r.status === "present") return true;
-        if (r.status === "half_day" || r.checkIn) {
-          const cDate = r.checkIn ? new Date(r.checkIn) : new Date(r.date);
-          const h = cDate.getHours();
-          const m = cDate.getMinutes();
-          return h < 12 || (h === 12 && m === 0);
-        }
-        return false;
-      })
+      .filter((r) => ["present", "half_day"].includes(r.status))
       .map((r) => r.user.toString())
   );
 
@@ -143,22 +128,7 @@ async function getAttendanceSummary() {
   const userPresentCounts = {};
   monthlyRecords.forEach((r) => {
     const uid = r.user.toString();
-    let isPres = false;
-    if (r.status === "present" || r.status === "leave") {
-      isPres = true;
-    } else if (r.status === "half_day") {
-      if (r.checkIn) {
-        const cDate = new Date(r.checkIn);
-        const h = cDate.getHours();
-        const m = cDate.getMinutes();
-        if (h < 12 || (h === 12 && m === 0)) isPres = true;
-      } else {
-        isPres = true;
-      }
-    }
-    if (isPres) {
-      userPresentCounts[uid] = (userPresentCounts[uid] || 0) + 1;
-    }
+    userPresentCounts[uid] = (userPresentCounts[uid] || 0) + 1;
   });
 
   const presentEmployees = [];

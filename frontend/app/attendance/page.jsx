@@ -163,24 +163,9 @@ export default function AttendancePage() {
                     status = "leave";
                     leaveCount++;
                 } else if (logRec.status === "present" || logRec.status === "half_day" || logRec.checkIn) {
-                    let isCheckInBeforeNoon = true;
-                    if (logRec.checkIn) {
-                        const cDate = new Date(logRec.checkIn);
-                        const istMs = cDate.getTime() + (330 * 60 * 1000);
-                        const ist = new Date(istMs);
-                        const hour = ist.getUTCHours();
-                        const minute = ist.getUTCMinutes();
-                        isCheckInBeforeNoon = hour < 12 || (hour === 12 && minute === 0);
-                    }
-
-                    if (isCheckInBeforeNoon) {
-                        status = "present";
-                        presentCount++;
-                    } else {
-                        status = "absent";
-                        absentCount++;
-                    }
-                } else {
+                    status = "present";
+                    presentCount++;
+                } else if (logRec.status === "absent") {
                     status = "absent";
                     absentCount++;
                 }
@@ -198,6 +183,52 @@ export default function AttendancePage() {
         }
 
         return { days, firstDayIndex, daysInMonth, presentCount, absentCount, leaveCount };
+    };
+
+    const handleDownloadTodayReport = () => {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const fileName = `teamflow_todays_attendance_report_${todayStr}.csv`;
+
+        const list = summaryData.monthlyInsights || [];
+        if (list.length === 0) {
+            alert("No attendance data available to download.");
+            return;
+        }
+
+        const headers = [
+            "Employee ID",
+            "Name",
+            "Department",
+            "Role",
+            "Today Status",
+            "Check-In Time",
+            "Present Days (Passed)",
+            "Attendance Percentage",
+            "Trend"
+        ];
+
+        const rows = list.map(emp => [
+            `"${emp.employeeId || 'N/A'}"`,
+            `"${emp.name || ''}"`,
+            `"${emp.dept || ''}"`,
+            `"${emp.role || ''}"`,
+            `"${emp.todayStatus || (emp.isPresentToday ? 'Present' : 'Absent')}"`,
+            `"${emp.checkInTime || 'N/A'}"`,
+            `"${emp.presentDays || ''}"`,
+            `"${emp.percentage}%"`,
+            `"${emp.trend || ''}"`
+        ]);
+
+        const csvContent = "data:text/csv;charset=utf-8," 
+            + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", fileName);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     const [leaveRequests, setLeaveRequests] = useState([]);
@@ -447,9 +478,15 @@ export default function AttendancePage() {
                                     Showing {selectedStatusFilter === "all" ? "All Employees" : selectedStatusFilter === "present" ? "Today's Present Employees" : "Today's Absent Employees"}
                                 </p>
                             </div>
-                            <div style={{ display: "flex", gap: "10px" }}>
-                                <button className="dashboard-btn-secondary" style={{ padding: "8px 14px" }}><Filter size={14} /></button>
-                                <button className="dashboard-btn-secondary" style={{ padding: "8px 14px" }}><Download size={14} /></button>
+                            <div>
+                                <button
+                                    className="dashboard-btn-secondary"
+                                    style={{ padding: "8px 14px", display: "inline-flex", alignItems: "center", gap: "6px", cursor: "pointer" }}
+                                    onClick={handleDownloadTodayReport}
+                                    title="Download Today's Attendance Report (CSV)"
+                                >
+                                    <Download size={14} /> Export Report
+                                </button>
                             </div>
                         </div>
 

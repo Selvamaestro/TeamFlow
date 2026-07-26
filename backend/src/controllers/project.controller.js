@@ -102,6 +102,33 @@ async function addDocument(req, res, next) {
   }
 }
 
+// POST /projects/upload-document (Standalone Cloudinary upload)
+async function uploadDocument(req, res, next) {
+  try {
+    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+
+    return res.status(200).json({
+      document: {
+        name: req.file.originalname,
+        url: req.file.path,
+        uploadedAt: new Date(),
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// DELETE /projects/:id/documents/:documentId
+async function deleteDocument(req, res, next) {
+  try {
+    const project = await projectService.removeDocument(req.project, req.params.documentId);
+    return res.status(200).json({ project: sanitizeProject(project, req.user.role) });
+  } catch (err) {
+    next(err);
+  }
+}
+
 // DELETE /projects/:id (Manager, CEO, HR)
 async function deleteProject(req, res, next) {
   try {
@@ -122,4 +149,6 @@ module.exports = {
   removeMember,
   setTeamLeader,
   addDocument,
+  deleteDocument,
+  uploadDocument,
 };

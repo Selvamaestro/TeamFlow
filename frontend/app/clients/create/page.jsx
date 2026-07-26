@@ -93,33 +93,6 @@ export default function CreateClientPage() {
 
             {/* Main Content */}
             <div className="main-content">
-                {/* Header */}
-                <header className="header">
-                    <div className="search-box">
-                        <Search className="search-icon" size={18} />
-                        <input
-                            type="text"
-                            placeholder="Search client database..."
-                        />
-                    </div>
-
-                    <div className="header-right">
-                        <Bell className="icons" />
-                        <CircleHelp className="icons" />
-
-                        <div className="profile">
-                            <img
-                                src="https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&auto=format&fit=crop&q=80"
-                                alt="Elena Rodriguez"
-                            />
-                            <div>
-                                <h4>Elena Rodriguez</h4>
-                                <span>Managing Director</span>
-                            </div>
-                        </div>
-                    </div>
-                </header>
-
                 {/* Body Content */}
                 <div className="dashboard">
                     {/* Breadcrumbs */}

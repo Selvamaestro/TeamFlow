@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Search, Bell, CircleHelp } from "lucide-react";
+import { Bell, CircleHelp } from "lucide-react";
 import api from "@/lib/api";
 import { getAvatarUrl } from "@/lib/utils";
 
@@ -35,16 +35,6 @@ export default function Navbar({
 
     return (
         <header className="topbar">
-            <div className="search-box">
-                <Search className="search-icon" size={18} />
-                <input
-                    type="text"
-                    placeholder={placeholder}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery && setSearchQuery(e.target.value)}
-                />
-            </div>
-
             <div className="header-right">
                 <div className="icons" title="Notifications">
                     <Bell size={20} />

@@ -5,6 +5,7 @@ import Link from "next/link";
 import "../dashboard/dashboard.css";
 import "./attendance.css";
 import Sidebar from "@/components/Sidebar";
+import Navbar from "@/components/Navbar";
 import api from "@/lib/api";
 import {
     Search,
@@ -159,48 +160,13 @@ export default function AttendancePage() {
             {/* Main Content */}
             <div className="main-content">
                 {/* Header */}
-                <header className="header">
-                    <div className="search-box">
-                        <Search className="search-icon" size={18} />
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search employees, records, departments..."
-                        />
-                    </div>
-
-                    <div className="header-right">
-                        <div className="icons">
-                            <Bell size={20} />
-                        </div>
-
-                        <div className="icons help-tooltip-wrapper">
-                            <CircleHelp size={20} />
-                            <div className="help-tooltip-popover">
-                                Attendance &amp; Leave — Track real-time present/absent employee status, check-in logs, and manage pending leave approvals.
-                            </div>
-                        </div>
-
-                        <Link href="/profile">
-                            <div className="profile" style={{ cursor: "pointer" }}>
-                                <div className="profile-text">
-                                    <h4>{user?.name || "User"}</h4>
-                                    <span>{user?.role?.toUpperCase() || "ADMINISTRATOR"}</span>
-                                </div>
-                                <img
-                                    src={
-                                        user?.avatarUrl ||
-                                        `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                                            user?.name || "User"
-                                        )}`
-                                    }
-                                    alt={user?.name || "Profile"}
-                                />
-                            </div>
-                        </Link>
-                    </div>
-                </header>
+                <Navbar
+                    user={user}
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    placeholder="Search employees, records, departments..."
+                    helpText="Attendance & Leave — Track real-time present/absent employee status, check-in logs, and manage pending leave approvals."
+                />
 
                 {/* Dashboard Page Body */}
                 <div className="dashboard">

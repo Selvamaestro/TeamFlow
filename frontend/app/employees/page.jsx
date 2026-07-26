@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import api from "@/lib/api";
 import Sidebar from "@/components/Sidebar";
+import Navbar from "@/components/Navbar";
+import { getAvatarUrl } from "@/lib/utils";
 
 import {
     Search,
@@ -125,6 +127,12 @@ return employees.filter((employee) => {
     return (
         <div className="dashboard-container">
             <Sidebar active="employees" />
+            <Navbar
+                searchQuery={search}
+                setSearchQuery={setSearch}
+                placeholder="Search employees by name, email, role, department..."
+                helpText="Employee Directory — Manage, monitor, and search workforce efficiency across departments."
+            />
             <div className="employees-page">
 
                 {/* ================= Header ================= */}
@@ -289,9 +297,10 @@ return employees.filter((employee) => {
                                             <div className="employee-info">
 
                                                 <div className="avatar">
-
-                                                    {employee.name?.charAt(0).toUpperCase()}
-
+                                                    <img
+                                                        src={getAvatarUrl(employee)}
+                                                        alt={employee.name}
+                                                    />
                                                 </div>
 
                                                 <div>

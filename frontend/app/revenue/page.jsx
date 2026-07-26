@@ -3,6 +3,7 @@ import api from "@/lib/api";
 import { useEffect, useState } from "react";
 import "./revenue.css";
 import Sidebar from "@/components/Sidebar";
+import Navbar from "@/components/Navbar";
 
 import {
     Search,
@@ -193,56 +194,13 @@ console.log(user);
             <main className="revenue-page">
 
                 {/* ================= TOP BAR ================= */}
-
-                <header className="topbar">
-
-                    <div className="search-box">
-
-                        <Search className="search-icon" size={18} />
-
-<input
-    type="text"
-    placeholder="Search project, client or status..."
-    value={search}
-    onChange={(e) => setSearch(e.target.value)}
-/>
-
-                    </div>
-
-                    <div className="header-right">
-
-                        <div className="icons">
-                            <Bell size={20} />
-                        </div>
-
-                        <div className="icons help-tooltip-wrapper">
-                            <CircleHelp size={20} />
-                            <div className="help-tooltip-popover">
-                                Revenue Insights — Real-time fiscal monitoring, monthly revenue trends, liquidity ratios, and project profitability analysis.
-                            </div>
-                        </div>
-
-                        <div className="profile">
-
-                            <div className="profile-text">
-                                <h4>{user?.name || "User"}</h4>
-
-                                <span>{user?.role?.toUpperCase()}</span>
-                            </div>
-
-                            <img
-                                src={
-                                    user?.avatarUrl ||
-                                    `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || "User")}`
-                                }
-                                alt={user?.name || "Profile"}
-                            />
-
-                        </div>
-
-                    </div>
-
-                </header>
+                <Navbar
+                    user={user}
+                    searchQuery={search}
+                    setSearchQuery={setSearch}
+                    placeholder="Search project, client or status..."
+                    helpText="Revenue Insights — Real-time fiscal monitoring, monthly revenue trends, liquidity ratios, and project profitability analysis."
+                />
 
                 {/* ================= PAGE HEADER ================= */}
 

@@ -22,14 +22,15 @@ class NoCheckInFoundError extends Error {
 }
 
 async function checkIn(userId) {
-  const today = startOfDay(new Date());
+  const now = new Date();
+  const today = startOfDay(now);
   const existing = await Attendance.findOne({ user: userId, date: today });
   if (existing) throw new AlreadyCheckedInError();
 
   return Attendance.create({
     user: userId,
     date: today,
-    checkIn: new Date(),
+    checkIn: now,
     status: "present",
   });
 }
@@ -208,7 +209,7 @@ async function getAttendanceSummary() {
   const userPresentCounts = {};
   monthlyRecords.forEach((r) => {
     const uid = r.user.toString();
-    userPresentCounts[uid] = (userPresentCounts[uid] || 0) + (r.status === "half_day" ? 0.5 : 1);
+    userPresentCounts[uid] = (userPresentCounts[uid] || 0) + 1;
   });
 
   const presentEmployees = [];
@@ -224,7 +225,7 @@ async function getAttendanceSummary() {
     const todayRec = todayRecordMap[uid];
     const isPresent = presentUserIds.has(uid);
     const todayStatus = isPresent
-      ? (todayRec?.status === "half_day" ? "Half Day" : "Present")
+      ? "Present"
       : (todayRec?.status === "leave" ? "On Leave" : "Absent");
     const checkInTime = todayRec?.checkIn
       ? new Date(todayRec.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })

@@ -101,6 +101,7 @@ async function createProject(creator, data) {
     paymentStatus: computedStatus,
     teamLeader: teamLeader || null,
     members: Array.isArray(members) ? members : [],
+    documents: Array.isArray(data.documents) ? data.documents : [],
     manager: creator.id,
   });
 
@@ -223,6 +224,14 @@ async function addDocument(project, file, uploadedBy) {
   return project.documents[project.documents.length - 1];
 }
 
+async function removeDocument(project, documentId) {
+  project.documents = project.documents.filter(
+    (doc) => doc._id && doc._id.toString() !== documentId.toString()
+  );
+  await project.save();
+  return project;
+}
+
 async function deleteProject(project) {
   const projectId = project._id || project.id || project;
   await Project.findByIdAndDelete(projectId);
@@ -238,6 +247,7 @@ module.exports = {
   removeMember,
   setTeamLeader,
   addDocument,
+  removeDocument,
   ForbiddenError,
   BadRequestError,
 };

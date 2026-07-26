@@ -3,6 +3,8 @@ import { useEffect, useState, useRef } from "react";
 import api from "@/lib/api";
 import "./profile.css";
 import Sidebar from "@/components/Sidebar";
+import Navbar from "@/components/Navbar";
+import { getAvatarUrl } from "@/lib/utils";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import authService from "@/services/authService";
@@ -215,9 +217,13 @@ setSelectedImage(null);
 
     return (
         <div className="dashboard-container">
-            <Sidebar />
+            <Sidebar active="profile" />
 
             <div className="dashboard-content">
+                <Navbar
+                    user={user}
+                    helpText="User Profile & Settings — View and edit your profile details, security credentials, and personal agenda."
+                />
 
 
                 <div className="profile-container">
@@ -284,9 +290,7 @@ setSelectedImage(null);
     src={
         selectedImage
             ? URL.createObjectURL(selectedImage)
-            : user?.avatarUrl
-                ? `http://localhost:5000${user.avatarUrl}`
-                : "/images/profile.jpg"
+            : getAvatarUrl(user)
     }
     alt="Profile"
 />

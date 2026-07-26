@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";import api from "@/lib/api";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
+import { getAvatarUrl } from "@/lib/utils";
 
 import {
     ArrowLeft,

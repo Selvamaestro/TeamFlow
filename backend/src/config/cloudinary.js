@@ -8,6 +8,8 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+const path = require("path");
+
 const LIMITS = {
   avatar: 2 * 1024 * 1024, // 2MB
   document: 15 * 1024 * 1024, // 15MB
@@ -23,11 +25,21 @@ const DOCUMENT_TYPES = [
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "image/png",
   "image/jpeg",
+  "image/webp",
+  "text/plain",
+  "text/csv",
+];
+
+const ALLOWED_EXTENSIONS = [
+  ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".png", ".jpg", ".jpeg", ".webp", ".txt", ".csv"
 ];
 
 function fileFilterFactory(allowedTypes) {
   return (req, file, cb) => {
-    if (allowedTypes.includes(file.mimetype)) return cb(null, true);
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowedTypes.includes(file.mimetype) || ALLOWED_EXTENSIONS.includes(ext)) {
+      return cb(null, true);
+    }
     cb(new Error(`Unsupported file type: ${file.mimetype}`));
   };
 }
@@ -35,10 +47,25 @@ function fileFilterFactory(allowedTypes) {
 function makeUploader({ folder, limitBytes, allowedTypes }) {
   const storage = new CloudinaryStorage({
     cloudinary,
-    params: async (req, file) => ({
-      folder: `teamflow/${folder}`,
-      resource_type: "auto",
-    }),
+    params: async (req, file) => {
+      const extWithDot = path.extname(file.originalname).toLowerCase();
+      const ext = extWithDot.replace(".", "");
+      const rawBaseName = path.basename(file.originalname, extWithDot);
+      const cleanBaseName = rawBaseName.replace(/[^a-zA-Z0-9_-]/g, "_") || "document";
+      const filename = `${cleanBaseName}_${Date.now()}`;
+
+      // PDF and Images can be served via auto/image resource_type so browsers can render/preview them inline
+      const isVisualOrPdf = ["jpg", "jpeg", "png", "webp", "gif", "pdf", "svg"].includes(ext);
+
+      return {
+        folder: `teamflow/${folder}`,
+        resource_type: isVisualOrPdf ? "auto" : "raw",
+        public_id: ext ? `${filename}.${ext}` : filename,
+        format: ext || undefined,
+        use_filename: true,
+        unique_filename: true,
+      };
+    },
   });
 
   return multer({

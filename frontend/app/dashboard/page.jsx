@@ -5,6 +5,8 @@ import api from "@/lib/api";
 import Link from "next/link";
 import "./dashboard.css";
 import Sidebar from "@/components/Sidebar";
+import Navbar from "@/components/Navbar";
+import { getAvatarUrl } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import {
     LayoutDashboard,

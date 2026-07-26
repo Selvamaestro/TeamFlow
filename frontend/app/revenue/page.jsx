@@ -3,6 +3,7 @@ import api from "@/lib/api";
 import { useEffect, useState } from "react";
 import "./revenue.css";
 import Sidebar from "@/components/Sidebar";
+import Navbar from "@/components/Navbar";
 
 import {
     Search,

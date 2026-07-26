@@ -7,6 +7,7 @@ import "../../dashboard/dashboard.css";
 import Sidebar from "@/components/Sidebar";
 import { projectService } from "../../../services/projectService";
 import { userService } from "../../../services/userService";
+import api from "@/lib/api";
 import {
     LayoutDashboard,
     Users,
@@ -40,6 +41,8 @@ import {
     UserCheck,
     TrendingUp,
     CreditCard,
+    FileText,
+    ExternalLink,
     X
 } from "lucide-react";
 
@@ -51,6 +54,48 @@ export default function ProjectDetailPage({ params }) {
     const [dbProject, setDbProject] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isDeleting, setIsDeleting] = useState(false);
+
+    // Document Upload & Delete state
+    const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+    const [docUploadMessage, setDocUploadMessage] = useState("");
+
+    const handleAddDocument = async (e) => {
+        const fileObj = e.target.files?.[0];
+        if (!fileObj) return;
+
+        setIsUploadingDoc(true);
+        setDocUploadMessage("");
+
+        try {
+            const formDataPayload = new FormData();
+            formDataPayload.append("document", fileObj);
+
+            await api.post(`/projects/${projectId}/documents`, formDataPayload, {
+                headers: { "Content-Type": "multipart/form-data" }
+            });
+
+            await fetchProjectDetails();
+            setDocUploadMessage("File successfully uploaded to project!");
+        } catch (err) {
+            console.error("Failed to upload document to project:", err);
+            setDocUploadMessage(err.response?.data?.message || err.message || "Failed to upload document.");
+        } finally {
+            setIsUploadingDoc(false);
+            e.target.value = "";
+        }
+    };
+
+    const handleDeleteDocument = async (docId, docName) => {
+        if (!confirm(`Are you sure you want to delete file "${docName}" from this project?`)) return;
+
+        try {
+            await api.delete(`/projects/${projectId}/documents/${docId}`);
+            await fetchProjectDetails();
+        } catch (err) {
+            console.error("Failed to delete document:", err);
+            alert("Failed to delete document: " + (err.response?.data?.message || err.message));
+        }
+    };
 
     // Financial update state
     const [expensesInput, setExpensesInput] = useState("");
@@ -177,6 +222,15 @@ export default function ProjectDetailPage({ params }) {
                     ? new Date(raw.endDate).toLocaleDateString()
                     : (raw.dueDate ? new Date(raw.dueDate).toLocaleDateString() : "Dec 2026");
 
+                const docsList = Array.isArray(raw.documents)
+                    ? raw.documents.map(d => ({
+                        id: d._id || d.id,
+                        name: d.name || "Untitled Document",
+                        url: d.url,
+                        uploadedAt: d.uploadedAt ? new Date(d.uploadedAt).toLocaleDateString() : "Recently"
+                    }))
+                    : [];
+
                 setDbProject({
                     id: raw._id || raw.id,
                     title: raw.title || "Project Initiative",
@@ -211,6 +265,7 @@ export default function ProjectDetailPage({ params }) {
                         initials: leadName.substring(0, 2).toUpperCase()
                     } : null,
                     membersList: membersList,
+                    documentsList: docsList,
                     activity: [
                         { title: "Project Loaded from MongoDB", desc: `Team Leader: ${leadName} • ${membersList.length} Working Members assigned.`, time: "Live Database Record" }
                     ]
@@ -662,19 +717,94 @@ export default function ProjectDetailPage({ params }) {
                                         </div>
                                     </div>
 
-                                    {/* Recent Activity Timeline */}
+                                    {/* Project Files & Documents Section */}
                                     <div className="overview-card">
-                                        <h3 style={{ color: "#002045", fontSize: "18px", marginBottom: "20px" }}>Recent Activity Timeline</h3>
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "10px" }}>
+                                            <h3 style={{ color: "#002045", fontSize: "18px", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+                                                <FileText size={20} color="#002045" /> Project Documents ({project.documentsList?.length || 0})
+                                            </h3>
 
-                                        <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-                                            {project.activity?.map((act, idx) => (
-                                                <div key={idx} style={{ background: "#f8fbff", padding: "14px", borderRadius: "10px", borderLeft: "4px solid #002045" }}>
-                                                    <strong style={{ color: "#002045", fontSize: "14px", display: "block" }}>{act.title}</strong>
-                                                    <p style={{ color: "#555", fontSize: "13px", margin: "4px 0", lineHeight: "18px" }}>{act.desc}</p>
-                                                    <span style={{ fontSize: "11px", color: "#888", display: "block" }}>{act.time}</span>
-                                                </div>
-                                            ))}
+                                            <div>
+                                                <input
+                                                    type="file"
+                                                    id="add-doc-input"
+                                                    style={{ display: "none" }}
+                                                    onChange={handleAddDocument}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="dashboard-btn-secondary"
+                                                    style={{ padding: "6px 12px", fontSize: "13px", display: "inline-flex", alignItems: "center", gap: "6px", cursor: "pointer" }}
+                                                    onClick={() => document.getElementById("add-doc-input").click()}
+                                                    disabled={isUploadingDoc}
+                                                >
+                                                    <Plus size={14} /> {isUploadingDoc ? "Uploading to Cloudinary..." : "Add File"}
+                                                </button>
+                                            </div>
                                         </div>
+
+                                        {docUploadMessage && (
+                                            <div style={{
+                                                fontSize: "12px",
+                                                fontWeight: 600,
+                                                padding: "8px 12px",
+                                                borderRadius: "6px",
+                                                marginBottom: "15px",
+                                                color: (docUploadMessage.toLowerCase().includes("fail") || docUploadMessage.toLowerCase().includes("error")) ? "#d63031" : "#169c52",
+                                                background: (docUploadMessage.toLowerCase().includes("fail") || docUploadMessage.toLowerCase().includes("error")) ? "#ffeaea" : "#eefbf3"
+                                            }}>
+                                                {docUploadMessage}
+                                            </div>
+                                        )}
+
+                                        {(!project.documentsList || project.documentsList.length === 0) ? (
+                                            <div style={{ background: "#f8fafc", padding: "24px", borderRadius: "10px", border: "1px dashed #cbd5e1", textAlign: "center", color: "#64748b" }}>
+                                                <UploadCloud size={32} color="#002045" style={{ opacity: 0.5, marginBottom: "8px" }} />
+                                                <p style={{ margin: 0, fontSize: "14px", fontWeight: 600 }}>No project documents uploaded yet.</p>
+                                                <p style={{ margin: "4px 0 0 0", fontSize: "12px", color: "#94a3b8" }}>Click "Add File" to upload project briefs, PDFs, or design assets.</p>
+                                            </div>
+                                        ) : (
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                                                {project.documentsList.map((doc) => (
+                                                    <div key={doc.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#ffffff", padding: "12px 14px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: "12px", overflow: "hidden" }}>
+                                                            <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "#eef4ff", color: "#002045", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                                                <FileText size={18} />
+                                                            </div>
+                                                            <div style={{ overflow: "hidden" }}>
+                                                                <strong style={{ color: "#002045", fontSize: "13px", display: "block", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
+                                                                    {doc.name}
+                                                                </strong>
+                                                                <span style={{ fontSize: "11px", color: "#777", display: "block" }}>
+                                                                    Uploaded {doc.uploadedAt}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                                                            {doc.url && (
+                                                                <a
+                                                                    href={doc.url}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
+                                                                    style={{ background: "#f1f5f9", color: "#002045", textDecoration: "none", padding: "6px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: "bold", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                                                                >
+                                                                    <ExternalLink size={12} /> View
+                                                                </a>
+                                                            )}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleDeleteDocument(doc.id, doc.name)}
+                                                                style={{ background: "#fee2e2", color: "#dc2626", border: "none", padding: "6px 8px", borderRadius: "6px", cursor: "pointer", display: "inline-flex", alignItems: "center" }}
+                                                                title="Delete File"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>

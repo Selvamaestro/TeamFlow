@@ -27,10 +27,20 @@ router.post(
   ctrl.setTeamLeader
 );
 router.post(
+  "/upload-document",
+  uploadProjectDocument.single("document"),
+  ctrl.uploadDocument
+);
+router.post(
   "/:id/documents",
   requireProjectAccess,
   uploadProjectDocument.single("document"),
   ctrl.addDocument
+);
+router.delete(
+  "/:id/documents/:documentId",
+  requireProjectAccess,
+  ctrl.deleteDocument
 );
 
 module.exports = router;

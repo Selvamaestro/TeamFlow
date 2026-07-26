@@ -8,6 +8,7 @@ import Sidebar from "@/components/Sidebar";
 import { projectService } from "../../../services/projectService";
 import { clientService } from "../../../services/clientService";
 import { userService } from "../../../services/userService";
+import api from "@/lib/api";
 import {
     LayoutDashboard,
     Users,
@@ -141,6 +142,49 @@ export default function CreateProjectPage() {
         });
     };
 
+    const uploadFileToCloudinary = async (fileObj) => {
+        const tempId = Date.now() + Math.random().toString();
+        const placeholder = {
+            id: tempId,
+            name: fileObj.name,
+            url: "",
+            isUploading: true,
+            error: null
+        };
+
+        setUploadedFiles(prev => [...prev, placeholder]);
+
+        try {
+            const formDataPayload = new FormData();
+            formDataPayload.append("document", fileObj);
+
+            const res = await api.post("/projects/upload-document", formDataPayload, {
+                headers: { "Content-Type": "multipart/form-data" }
+            });
+
+            const docData = res.data?.document;
+            if (docData && docData.url) {
+                setUploadedFiles(prev => prev.map(item => item.id === tempId ? {
+                    id: tempId,
+                    name: docData.name || fileObj.name,
+                    url: docData.url,
+                    isUploading: false,
+                    error: null
+                } : item));
+            } else {
+                throw new Error("No URL returned from server");
+            }
+        } catch (err) {
+            console.error("Cloudinary file upload failed:", err);
+            const errMsg = err.response?.data?.message || err.message || "Upload failed";
+            setUploadedFiles(prev => prev.map(item => item.id === tempId ? {
+                ...item,
+                isUploading: false,
+                error: errMsg
+            } : item));
+        }
+    };
+
     const handleDrag = (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -155,21 +199,20 @@ export default function CreateProjectPage() {
         e.preventDefault();
         e.stopPropagation();
         setDragActive(false);
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            const filesArr = Array.from(e.dataTransfer.files).map(f => f.name);
-            setUploadedFiles(prev => [...prev, ...filesArr]);
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            Array.from(e.dataTransfer.files).forEach(f => uploadFileToCloudinary(f));
         }
     };
 
     const handleFileInput = (e) => {
-        if (e.target.files && e.target.files[0]) {
-            const filesArr = Array.from(e.target.files).map(f => f.name);
-            setUploadedFiles(prev => [...prev, ...filesArr]);
+        if (e.target.files && e.target.files.length > 0) {
+            Array.from(e.target.files).forEach(f => uploadFileToCloudinary(f));
+            e.target.value = "";
         }
     };
 
-    const removeFile = (index) => {
-        setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+    const removeFile = (id) => {
+        setUploadedFiles(prev => prev.filter((item) => item.id !== id));
     };
 
     // Filter employees list based on search query
@@ -198,9 +241,13 @@ export default function CreateProjectPage() {
         setIsSubmitting(true);
 
         try {
-            // Send payload to backend with teamLeader and members IDs
+            // Send payload to backend with teamLeader, members IDs, and uploaded Cloudinary documents
             const selectedDueDate = formData.dueDate ? new Date(formData.dueDate) : new Date("2026-12-01");
             const selectedStartDate = formData.startDate ? new Date(formData.startDate) : new Date();
+
+            const documentsPayload = uploadedFiles
+                .filter(f => f.url && !f.isUploading)
+                .map(f => ({ name: f.name, url: f.url }));
 
             await projectService.createProject({
                 title: formData.title,
@@ -212,6 +259,7 @@ export default function CreateProjectPage() {
                 dueDate: selectedDueDate,
                 endDate: selectedDueDate,
                 revenue: Number(formData.revenue) || 50000,
+                documents: documentsPayload,
                 status: "planning"
             });
 
@@ -240,33 +288,6 @@ export default function CreateProjectPage() {
 
             {/* Main Content */}
             <div className="main-content">
-                {/* Header */}
-                <header className="header">
-                    <div className="search-box">
-                        <Search className="search-icon" size={18} />
-                        <input
-                            type="text"
-                            placeholder="Search projects..."
-                        />
-                    </div>
-
-                    <div className="header-right">
-                        <Bell className="icons" />
-                        <CircleHelp className="icons" />
-
-                        <div className="profile">
-                            <img
-                                src="https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&auto=format&fit=crop&q=80"
-                                alt="Alex Mercer"
-                            />
-                            <div>
-                                <h4>Alex Mercer</h4>
-                                <span>CEO &amp; Product Head</span>
-                            </div>
-                        </div>
-                    </div>
-                </header>
-
                 {/* Body Content */}
                 <div className="dashboard">
                     {/* Breadcrumb Navigation */}
@@ -534,19 +555,41 @@ export default function CreateProjectPage() {
 
                                 {uploadedFiles.length > 0 && (
                                     <div style={{ marginTop: "15px", display: "flex", flexDirection: "column", gap: "8px" }}>
-                                        {uploadedFiles.map((file, idx) => (
-                                            <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fff", padding: "10px 15px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                                        {uploadedFiles.map((file) => (
+                                            <div key={file.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fff", padding: "10px 15px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
                                                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                                                     <FileText size={18} color="#002045" />
-                                                    <span style={{ fontSize: "14px", color: "#333", fontWeight: 500 }}>{file}</span>
+                                                    <div>
+                                                        <span style={{ fontSize: "14px", color: "#333", fontWeight: 500, display: "block" }}>{file.name}</span>
+                                                        {file.url && (
+                                                            <a href={file.url} target="_blank" rel="noreferrer" style={{ fontSize: "11px", color: "#2563eb", textDecoration: "underline" }}>
+                                                                View on Cloudinary
+                                                            </a>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeFile(idx)}
-                                                    style={{ background: "none", border: "none", cursor: "pointer", color: "#777" }}
-                                                >
-                                                    <X size={16} />
-                                                </button>
+                                                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                                    {file.isUploading ? (
+                                                        <span style={{ fontSize: "12px", background: "#fef3c7", color: "#d97706", padding: "3px 8px", borderRadius: "6px", fontWeight: "600" }}>
+                                                            Uploading to Cloudinary...
+                                                        </span>
+                                                    ) : file.error ? (
+                                                        <span style={{ fontSize: "12px", background: "#fee2e2", color: "#dc2626", padding: "3px 8px", borderRadius: "6px", fontWeight: "600" }}>
+                                                            {file.error}
+                                                        </span>
+                                                    ) : (
+                                                        <span style={{ fontSize: "12px", background: "#dcfce7", color: "#15803d", padding: "3px 8px", borderRadius: "6px", fontWeight: "600", display: "flex", alignItems: "center", gap: "4px" }}>
+                                                            <Check size={12} /> Saved on Cloudinary
+                                                        </span>
+                                                    )}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeFile(file.id)}
+                                                        style={{ background: "none", border: "none", cursor: "pointer", color: "#777" }}
+                                                    >
+                                                        <X size={16} />
+                                                    </button>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>

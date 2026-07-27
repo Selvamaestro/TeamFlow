@@ -31,7 +31,10 @@ async function listTasks(project, projectRoleFlags, userId, { status } = {}) {
     filter.assignedTo = userId;
   }
 
-  return Task.find(filter).sort({ createdAt: -1 });
+  return Task.find(filter)
+    .populate("assignedTo", "name email employeeId avatarUrl designation role")
+    .populate("assignedBy", "name email employeeId avatarUrl designation role")
+    .sort({ updatedAt: -1 });
 }
 
 async function getTaskForViewer(taskId, viewer) {

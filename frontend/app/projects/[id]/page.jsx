@@ -7,6 +7,7 @@ import "../../dashboard/dashboard.css";
 import Sidebar from "@/components/Sidebar";
 import { projectService } from "../../../services/projectService";
 import { userService } from "../../../services/userService";
+import { taskService } from "../../../services/taskService";
 import api from "@/lib/api";
 import {
     LayoutDashboard,
@@ -53,6 +54,8 @@ export default function ProjectDetailPage({ params }) {
 
     const [dbProject, setDbProject] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [completedTasks, setCompletedTasks] = useState([]);
+    const [isLoadingTasks, setIsLoadingTasks] = useState(true);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
 
@@ -284,6 +287,31 @@ export default function ProjectDetailPage({ params }) {
 
     useEffect(() => {
         fetchProjectDetails();
+    }, [projectId]);
+
+    useEffect(() => {
+        async function fetchCompletedTasks() {
+            setIsLoadingTasks(true);
+            try {
+                // Don't filter server-side to "approved" only — an employee's task
+                // already reads as done once they submit it (see DONE_STATUSES in
+                // TaskListItem.jsx on the employee side); it just hasn't been signed
+                // off by the Team Leader yet. Fetch everything and filter client-side
+                // so both states show up here.
+                const res = await taskService.getProjectTasks(projectId);
+                const allTasks = Array.isArray(res?.tasks) ? res.tasks : [];
+                const done = allTasks
+                    .filter((t) => ["submitted", "approved"].includes(t.status))
+                    .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+                setCompletedTasks(done);
+            } catch (err) {
+                console.warn("Completed tasks fetch info:", err.message);
+                setCompletedTasks([]);
+            } finally {
+                setIsLoadingTasks(false);
+            }
+        }
+        if (projectId) fetchCompletedTasks();
     }, [projectId]);
 
     const openEditModal = () => {
@@ -716,6 +744,54 @@ export default function ProjectDetailPage({ params }) {
                                                 )}
                                             </div>
                                         </div>
+                                    </div>
+
+                                    {/* Recently Completed Tasks Section */}
+                                    <div className="overview-card">
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                                            <h3 style={{ color: "#002045", fontSize: "18px", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+                                                <CheckCircle2 size={20} color="#002045" /> Recently Completed Tasks
+                                            </h3>
+                                            <span className="badge green" style={{ fontSize: "11px" }}>
+                                                {completedTasks.length} Completed
+                                            </span>
+                                        </div>
+
+                                        {isLoadingTasks ? (
+                                            <div style={{ color: "#777", fontSize: "13px", padding: "8px 0" }}>Loading tasks...</div>
+                                        ) : completedTasks.length === 0 ? (
+                                            <div style={{ color: "#777", fontSize: "13px", background: "#f8fafc", padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                                                No tasks have been completed for this project yet.
+                                            </div>
+                                        ) : (
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                                                {completedTasks.slice(0, 6).map((task) => {
+                                                    const assignee = task.assignedTo && typeof task.assignedTo === "object" ? task.assignedTo : null;
+                                                    const assigner = task.assignedBy && typeof task.assignedBy === "object" ? task.assignedBy : null;
+                                                    const completedOn = task.updatedAt ? new Date(task.updatedAt).toLocaleDateString() : "Recently";
+                                                    const isApproved = task.status === "approved";
+                                                    return (
+                                                        <div key={task._id} style={{ background: "#fff", padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px" }}>
+                                                                <strong style={{ color: "#002045", fontSize: "13px" }}>{task.title}</strong>
+                                                                <span className={`badge ${isApproved ? "green" : "blue"}`} style={{ fontSize: "10px", flexShrink: 0, whiteSpace: "nowrap" }}>
+                                                                    {isApproved ? "APPROVED" : "PENDING APPROVAL"}
+                                                                </span>
+                                                            </div>
+                                                            <div style={{ fontSize: "11px", color: "#666", marginTop: "6px" }}>
+                                                                {isApproved ? "Completed" : "Submitted"} by <strong style={{ color: "#334155" }}>{assignee?.name || "Unassigned"}</strong>
+                                                                {" "}on {completedOn}
+                                                            </div>
+                                                            {assigner?.name && (
+                                                                <div style={{ fontSize: "11px", color: "#666", marginTop: "2px" }}>
+                                                                    Assigned by Team Leader <strong style={{ color: "#334155" }}>{assigner.name}</strong>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Project Files & Documents Section */}

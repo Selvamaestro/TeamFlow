@@ -26,6 +26,12 @@ const DAY_BADGE = {
   leave: "bg-tertiary-fixed text-tertiary",
 };
 
+function startOfDay(d) {
+  const date = new Date(d);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
 function buildCalendarWeeks(year, month, recordsByDay) {
   // month is 0-indexed. Monday-first grid, matching the mockup.
   const firstOfMonth = new Date(year, month, 1);
@@ -106,8 +112,48 @@ export default function AttendancePage() {
     [viewYear, viewMonth, recordsByDay]
   );
 
-  const presentDays = records.filter((r) => r.status === "present").length;
-  const attendanceRate = records.length ? Math.round((presentDays / records.length) * 100) : 0;
+  // Mirror the admin panel's day-by-day logic: walk every day in the
+  // viewed month up to "today" (inclusive), classifying each one as
+  // present, absent, or leave. A past day with no record must NOT be
+  // silently excluded (that's what inflated the rate before) — it
+  // counts as absent. Future days are excluded from the denominator
+  // entirely since they haven't happened yet.
+  const attendanceStats = useMemo(() => {
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    const todayStart = startOfDay(today);
+
+    let presentCount = 0;
+    let absentCount = 0;
+    let leaveCount = 0;
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const cellDate = startOfDay(new Date(viewYear, viewMonth, day));
+      if (cellDate > todayStart) continue; // future day — not counted yet
+
+      const record = recordsByDay[day];
+
+      if (record) {
+        if (record.status === "present" || record.status === "half_day") {
+          presentCount++;
+        } else if (record.status === "leave") {
+          leaveCount++;
+        } else {
+          absentCount++; // explicit "absent" or other non-present status
+        }
+      } else {
+        absentCount++; // past day, no record at all = absent
+      }
+    }
+
+    // Leave days sit outside the working-day base, same as the admin panel.
+    const workingDays = presentCount + absentCount;
+    const rate = workingDays > 0 ? Math.round((presentCount / workingDays) * 100) : 0;
+
+    return { presentCount, absentCount, leaveCount, workingDays, rate };
+  }, [viewYear, viewMonth, recordsByDay, today]);
+
+  const presentDays = attendanceStats.presentCount;
+  const attendanceRate = attendanceStats.rate;
 
   function shiftMonth(delta) {
     let m = viewMonth + delta;
@@ -226,6 +272,14 @@ export default function AttendancePage() {
                     viewYear === today.getFullYear() &&
                     viewMonth === today.getMonth() &&
                     cell.day === today.getDate();
+
+                  // A day is only "absent" if it's already in the past (before today)
+                  // and no attendance record exists for it. Future days and today
+                  // (before check-in) should stay neutral, not red.
+                  const cellDate = cell ? new Date(viewYear, viewMonth, cell.day) : null;
+                  const isPast = cellDate && startOfDay(cellDate) < startOfDay(today);
+                  const isMissedDay = cell && !cell.record && isPast;
+
                   return (
                     <div
                       key={idx}
@@ -244,10 +298,15 @@ export default function AttendancePage() {
                           {cell.record && (
                             <div
                               className={`text-[10px] px-2 py-0.5 rounded-full font-bold self-start ${
-                                DAY_BADGE[cell.record.status] || DAY_BADGE.present
+                                DAY_BADGE[cell.record.status] || DAY_BADGE.absent
                               }`}
                             >
                               {cell.record.status.replace("_", " ").toUpperCase()}
+                            </div>
+                          )}
+                          {isMissedDay && (
+                            <div className="text-[10px] px-2 py-0.5 rounded-full font-bold self-start bg-error-container text-error">
+                              ABSENT
                             </div>
                           )}
                         </>

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import EmployeeLayout from "../../../components/EmployeeLayout";
 import { useAuth } from "../../../context/AuthContext";
+import * as authApi from "../../../api/auth.api";
 import * as userApi from "../../../api/user.api";
 import * as attendanceApi from "../../../api/attendance.api";
 import * as leaveApi from "../../../api/leave.api";
@@ -39,6 +40,12 @@ export default function ProfilePage() {
   const [attendanceStreak, setAttendanceStreak] = useState(0);
   const [pendingLeaveCount, setPendingLeaveCount] = useState(0);
   const [totalPoints, setTotalPoints] = useState(0);
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordFeedback, setPasswordFeedback] = useState(null);
 
   useEffect(() => {
     if (user) {
@@ -83,6 +90,37 @@ export default function ProfilePage() {
     setName(user.name || "");
     setPhone(user.phone || "");
     setSaveFeedback(null);
+  }
+
+  async function handleChangePassword(e) {
+    e.preventDefault();
+    setPasswordFeedback(null);
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordFeedback({ type: "error", text: "Fill in all three password fields." });
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordFeedback({ type: "error", text: "New password must be at least 8 characters." });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordFeedback({ type: "error", text: "New password and confirmation don't match." });
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      await authApi.changePassword(currentPassword, newPassword);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setPasswordFeedback({ type: "success", text: "Password updated successfully." });
+    } catch (err) {
+      setPasswordFeedback({ type: "error", text: err.message || "Couldn't update your password." });
+    } finally {
+      setIsChangingPassword(false);
+    }
   }
 
   async function handleAvatarPick(e) {
@@ -229,29 +267,6 @@ export default function ProfilePage() {
                 <h5 className="font-label-md text-primary mb-4">Security</h5>
               </div>
 
-              <div className="md:col-span-2">
-                <label className="block text-label-md text-on-surface mb-2">Password</label>
-                <div className="flex flex-col md:flex-row gap-4">
-                  <input
-                    className="flex-grow px-4 py-3 rounded-lg border border-outline-variant bg-surface-container-low text-on-surface-variant cursor-not-allowed outline-none font-body-md"
-                    readOnly
-                    type="password"
-                    value="********"
-                  />
-                  <button
-                    className="px-6 py-3 bg-surface-container-high text-on-surface-variant font-label-md rounded-lg whitespace-nowrap cursor-not-allowed"
-                    type="button"
-                    disabled
-                    title="Password changes aren't available yet — this needs a backend endpoint first."
-                  >
-                    Update Password
-                  </button>
-                </div>
-                <p className="text-[12px] text-on-surface-variant mt-1">
-                  Password changes aren't wired up yet — the backend doesn't expose that endpoint.
-                </p>
-              </div>
-
               {saveFeedback && (
                 <div className="md:col-span-2">
                   <p
@@ -278,6 +293,71 @@ export default function ProfilePage() {
                   disabled={isSaving}
                 >
                   {isSaving ? "Saving..." : "Save Profile"}
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section className="bg-white rounded-[16px] p-8 border border-outline-variant card-shadow">
+            <div className="flex items-center gap-2 mb-8">
+              <span className="material-symbols-outlined text-primary">lock</span>
+              <h4 className="font-headline-md text-headline-md text-on-surface">Change Password</h4>
+            </div>
+
+            <form className="grid grid-cols-1 md:grid-cols-2 gap-x-gutter gap-y-6" onSubmit={handleChangePassword}>
+              <div className="md:col-span-2">
+                <label className="block text-label-md text-on-surface mb-2">Current Password</label>
+                <input
+                  className="w-full px-4 py-3 rounded-lg border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary-fixed outline-none transition-all font-body-md"
+                  type="password"
+                  autoComplete="current-password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                />
+              </div>
+
+              <div className="md:col-span-1">
+                <label className="block text-label-md text-on-surface mb-2">New Password</label>
+                <input
+                  className="w-full px-4 py-3 rounded-lg border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary-fixed outline-none transition-all font-body-md"
+                  type="password"
+                  autoComplete="new-password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
+                <p className="text-[12px] text-on-surface-variant mt-1">At least 8 characters.</p>
+              </div>
+
+              <div className="md:col-span-1">
+                <label className="block text-label-md text-on-surface mb-2">Confirm New Password</label>
+                <input
+                  className="w-full px-4 py-3 rounded-lg border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary-fixed outline-none transition-all font-body-md"
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+              </div>
+
+              {passwordFeedback && (
+                <div className="md:col-span-2">
+                  <p
+                    className={`text-label-sm ${
+                      passwordFeedback.type === "success" ? "text-primary" : "text-error"
+                    }`}
+                  >
+                    {passwordFeedback.text}
+                  </p>
+                </div>
+              )}
+
+              <div className="md:col-span-2 pt-2 flex justify-end">
+                <button
+                  className="px-8 py-3 bg-primary text-white font-label-md rounded-lg shadow-md hover:opacity-90 active:scale-95 transition-all disabled:opacity-60"
+                  type="submit"
+                  disabled={isChangingPassword}
+                >
+                  {isChangingPassword ? "Updating..." : "Update Password"}
                 </button>
               </div>
             </form>

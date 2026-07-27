@@ -7,6 +7,7 @@ import Sidebar from "@/components/Sidebar";
 import Navbar from "@/components/Navbar";
 import { clientService } from "../../services/clientService";
 import api from "@/lib/api";
+import * as XLSX from "xlsx";
 import {
     LayoutDashboard,
     Users,
@@ -146,6 +147,49 @@ export default function ClientsPage() {
 
     const selectedClient = filteredClients[selectedClientIndex] || filteredClients[0] || clientsList[0];
 
+    const handleExportExcel = () => {
+        const listToExport = filteredClients.length > 0 ? filteredClients : clientsList;
+        if (!listToExport || listToExport.length === 0) {
+            alert("No client records available to export.");
+            return;
+        }
+
+        const excelData = listToExport.map((c, index) => ({
+            "S.No": index + 1,
+            "Company / Client Name": c.name || "N/A",
+            "Contact Person": c.contactName || "N/A",
+            "Email Address": c.email || "N/A",
+            "Phone Number": c.phone || "N/A",
+            "Website": c.website || "N/A",
+            "Account Status": c.status || "Active",
+            "Account Type": c.badge || "Key Account",
+            "Joined Year": c.since || "N/A",
+            "Notes / Remarks": c.quote || "N/A"
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+        // Auto-fit column widths
+        worksheet["!cols"] = [
+            { wch: 6 },  // S.No
+            { wch: 25 }, // Company Name
+            { wch: 20 }, // Contact Person
+            { wch: 25 }, // Email
+            { wch: 18 }, // Phone
+            { wch: 25 }, // Website
+            { wch: 14 }, // Status
+            { wch: 18 }, // Badge
+            { wch: 12 }, // Joined Year
+            { wch: 35 }  // Notes
+        ];
+
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Clients Directory");
+
+        const today = new Date().toISOString().split("T")[0];
+        XLSX.writeFile(workbook, `Clients_List_${today}.xlsx`);
+    };
+
     return (
         <div className="dashboard-container">
             {/* Sidebar */}
@@ -171,7 +215,7 @@ export default function ClientsPage() {
                         </div>
 
                         <div style={{ display: "flex", gap: "12px" }}>
-                            <button className="dashboard-btn-secondary">
+                            <button className="dashboard-btn-secondary" onClick={handleExportExcel}>
                                 <Download size={16} /> Export List
                             </button>
                             <Link

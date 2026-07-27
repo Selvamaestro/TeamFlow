@@ -8,6 +8,7 @@ import Sidebar from "@/components/Sidebar";
 import { clientService } from "../../../services/clientService";
 import { projectService } from "../../../services/projectService";
 import api from "@/lib/api";
+import * as XLSX from "xlsx";
 import {
     LayoutDashboard,
     Users,
@@ -167,6 +168,11 @@ export default function ClientDetailPage({ params }) {
             return;
         }
 
+        if (editFormData.phone && editFormData.phone.length !== 10) {
+            setEditErrorMessage("Phone number must be exactly 10 digits");
+            return;
+        }
+
         setIsUpdating(true);
         setEditErrorMessage("");
 
@@ -217,6 +223,56 @@ export default function ClientDetailPage({ params }) {
     const totalCalculatedRevenue = dbProjects.length > 0
         ? `₹${dbProjects.reduce((acc, p) => acc + (p.revenue || 0), 0).toLocaleString()}`
         : "₹0";
+
+    const handleExportClientRecord = () => {
+        if (!dbClient) {
+            alert("No client details available to export.");
+            return;
+        }
+
+        // Sheet 1: Client Overview & Contact Information
+        const clientOverviewData = [
+            { Field: "Client / Company Name", Value: dbClient.name || "N/A" },
+            { Field: "Contact Person", Value: dbClient.contactPerson || "N/A" },
+            { Field: "Email Address", Value: dbClient.email || "N/A" },
+            { Field: "Phone Number", Value: dbClient.phone || "N/A" },
+            { Field: "Website", Value: dbClient.website || "N/A" },
+            { Field: "Engagement Status", Value: dbClient.status || "N/A" },
+            { Field: "Account Badge", Value: dbClient.badge || "N/A" },
+            { Field: "Rating", Value: dbClient.rating || "5.0 / 5.0" },
+            { Field: "Industry", Value: dbClient.industry || "N/A" },
+            { Field: "Retention Score", Value: "98.5%" },
+            { Field: "Total Projects Count", Value: dbProjects.length },
+            { Field: "Total Revenue", Value: totalCalculatedRevenue },
+            { Field: "Created Date", Value: dbClient.createdAt || "N/A" },
+            { Field: "Notes & Summary", Value: dbClient.notes || "N/A" }
+        ];
+
+        const sheet1 = XLSX.utils.json_to_sheet(clientOverviewData);
+        sheet1["!cols"] = [{ wch: 28 }, { wch: 50 }];
+
+        // Sheet 2: Project History & Contracts
+        const projectHistoryData = projectHistory.length > 0
+            ? projectHistory.map((proj, idx) => ({
+                "S.No": idx + 1,
+                "Project Name": proj.name || "N/A",
+                "Target Date": proj.date || "N/A",
+                "Status": proj.status || "N/A",
+                "Revenue Value": proj.revenue || "₹0"
+            }))
+            : [{ "S.No": "-", "Project Name": "No projects linked to this client", "Target Date": "-", "Status": "-", "Revenue Value": "-" }];
+
+        const sheet2 = XLSX.utils.json_to_sheet(projectHistoryData);
+        sheet2["!cols"] = [{ wch: 6 }, { wch: 30 }, { wch: 18 }, { wch: 16 }, { wch: 18 }];
+
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, sheet1, "Client Details");
+        XLSX.utils.book_append_sheet(workbook, sheet2, "Project History");
+
+        const sanitizedName = (dbClient.name || "Client").replace(/[^a-zA-Z0-9]/g, "_");
+        const today = new Date().toISOString().split("T")[0];
+        XLSX.writeFile(workbook, `Client_Record_${sanitizedName}_${today}.xlsx`);
+    };
 
     return (
         <div className="dashboard-container">
@@ -279,7 +335,7 @@ export default function ClientDetailPage({ params }) {
                         </button>
 
                         <div style={{ display: "flex", gap: "12px" }}>
-                            <button className="dashboard-btn-secondary">
+                            <button className="dashboard-btn-secondary" onClick={handleExportClientRecord}>
                                 <Download size={16} /> Export Record
                             </button>
                             <button
@@ -556,11 +612,16 @@ export default function ClientDetailPage({ params }) {
                                         />
                                     </div>
                                     <div>
-                                        <label style={{ display: "block", fontSize: "13px", color: "#334155", fontWeight: "bold", marginBottom: "6px" }}>Phone Number</label>
+                                        <label style={{ display: "block", fontSize: "13px", color: "#334155", fontWeight: "bold", marginBottom: "6px" }}>Phone Number (10 digits)</label>
                                         <input
-                                            type="text"
+                                            type="tel"
+                                            maxLength={10}
                                             value={editFormData.phone}
-                                            onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                                            onChange={(e) => {
+                                                const cleaned = e.target.value.replace(/\D/g, "").slice(0, 10);
+                                                setEditFormData({ ...editFormData, phone: cleaned });
+                                            }}
+                                            placeholder="e.g. 9876543210"
                                             style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px", outline: "none", background: "#fff" }}
                                         />
                                     </div>

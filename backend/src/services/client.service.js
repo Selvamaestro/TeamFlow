@@ -24,7 +24,8 @@ async function getClientById(id) {
 
 async function createClient(data, createdBy) {
   const { name, email, company, phone, status, logoUrl, notes } = data;
-  return Client.create({ name, email, company, phone, status, logoUrl, notes, createdBy });
+  const sanitizedPhone = phone ? String(phone).replace(/\D/g, "").slice(0, 10) : phone;
+  return Client.create({ name, email, company, phone: sanitizedPhone, status, logoUrl, notes, createdBy });
 }
 
 const UPDATABLE_FIELDS = ["name", "email", "company", "phone", "status", "notes", "logoUrl"];
@@ -32,7 +33,13 @@ const UPDATABLE_FIELDS = ["name", "email", "company", "phone", "status", "notes"
 async function updateClient(id, data) {
   const updates = {};
   for (const field of UPDATABLE_FIELDS) {
-    if (data[field] !== undefined) updates[field] = data[field];
+    if (data[field] !== undefined) {
+      if (field === "phone" && data[field]) {
+        updates[field] = String(data[field]).replace(/\D/g, "").slice(0, 10);
+      } else {
+        updates[field] = data[field];
+      }
+    }
   }
   return Client.findByIdAndUpdate(id, updates, { new: true, runValidators: true });
 }

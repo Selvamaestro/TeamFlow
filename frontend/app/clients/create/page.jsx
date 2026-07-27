@@ -43,7 +43,6 @@ export default function CreateClientPage() {
         email: "",
         phone: "",
         status: "active",
-        logoUrl: "",
         notes: ""
     });
 
@@ -51,6 +50,11 @@ export default function CreateClientPage() {
         e.preventDefault();
         if (!formData.name) {
             setErrorMessage("Contact/Client name is required");
+            return;
+        }
+
+        if (formData.phone && formData.phone.length !== 10) {
+            setErrorMessage("Phone number must be exactly 10 digits");
             return;
         }
 
@@ -65,7 +69,6 @@ export default function CreateClientPage() {
                 email: formData.email,
                 phone: formData.phone,
                 status: formData.status,
-                logoUrl: formData.logoUrl,
                 notes: formData.notes
             });
 
@@ -150,12 +153,16 @@ export default function CreateClientPage() {
                             </div>
 
                             <div className="form-group">
-                                <label>Phone Number</label>
+                                <label>Phone Number (10 digits)</label>
                                 <input
-                                    type="text"
+                                    type="tel"
+                                    maxLength={10}
                                     value={formData.phone}
-                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                    placeholder="+1 (555) 012-9988"
+                                    onChange={(e) => {
+                                        const cleaned = e.target.value.replace(/\D/g, "").slice(0, 10);
+                                        setFormData({ ...formData, phone: cleaned });
+                                    }}
+                                    placeholder="e.g. 9876543210"
                                 />
                             </div>
 
@@ -168,16 +175,6 @@ export default function CreateClientPage() {
                                     <option value="active">Active</option>
                                     <option value="inactive">Inactive</option>
                                 </select>
-                            </div>
-
-                            <div className="form-group">
-                                <label>Company Logo Image URL</label>
-                                <input
-                                    type="text"
-                                    value={formData.logoUrl}
-                                    onChange={(e) => setFormData({ ...formData, logoUrl: e.target.value })}
-                                    placeholder="https://example.com/logo.png"
-                                />
                             </div>
 
                             <div className="form-group full-width">

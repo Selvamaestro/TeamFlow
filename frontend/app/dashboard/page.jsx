@@ -331,7 +331,6 @@ export default function Dashboard() {
                                 ) : (
                                     projects.slice(0, 2).map((project) => (
                                         <div key={project._id} className="project-card">
-                                            <h4>{project.title}</h4>
 
                                             <div className="project-progress-item">
 
@@ -340,13 +339,7 @@ export default function Dashboard() {
                                                     <h4>{project.title}</h4>
 
                                                     <span>
-                                                        {project.status === "completed"
-                                                            ? "100%"
-                                                            : project.status === "planning"
-                                                                ? "30%"
-                                                                : project.status === "in_progress"
-                                                                    ? "70%"
-                                                                    : "50%"}
+                                                        {project.progress + "%"}
                                                     </span>
 
                                                 </div>
@@ -364,13 +357,8 @@ export default function Dashboard() {
                                                         className="progress-fill employee-progress"
                                                         style={{
                                                             width:
-                                                                project.status === "completed"
-                                                                    ? "100%"
-                                                                    : project.status === "planning"
-                                                                        ? "30%"
-                                                                        : project.status === "in_progress"
-                                                                            ? "70%"
-                                                                            : "50%"
+                                                                project.progress +
+                                                                "%",
                                                         }}
                                                     />
 

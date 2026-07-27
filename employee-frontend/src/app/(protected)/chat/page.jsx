@@ -36,6 +36,7 @@ export default function ChatPage() {
   const [isUploading, setIsUploading] = useState(false);
 
   const activeConversation = conversations.find((c) => c._id === activeId);
+  const myId = user?.id || user?._id;
 
   const loadConversations = useCallback(async () => {
     setIsLoadingConversations(true);
@@ -49,7 +50,7 @@ export default function ChatPage() {
       const names = {};
       await Promise.all(
         directChats.map(async (c) => {
-          const otherId = c.participants.find((p) => p !== user?.id);
+          const otherId = c.participants.find((p) => p !== myId);
           if (!otherId) return;
           try {
             const otherUser = await userApi.getUser(otherId);
@@ -67,7 +68,7 @@ export default function ChatPage() {
     } finally {
       setIsLoadingConversations(false);
     }
-  }, [user?.id]);
+  }, [myId]);
 
   useEffect(() => {
     loadConversations();
@@ -103,7 +104,7 @@ export default function ChatPage() {
       setMessages((prev) => (prev.some((m) => m._id === message._id) ? prev : [...prev, message]));
     }
     function handleTypingStart({ conversationId, userId }) {
-      if (conversationId === activeId && userId !== user?.id) setTypingUserId(userId);
+      if (conversationId === activeId && userId !== myId) setTypingUserId(userId);
     }
     function handleTypingStop({ conversationId, userId }) {
       if (conversationId === activeId && userId === typingUserId) setTypingUserId(null);
@@ -117,7 +118,7 @@ export default function ChatPage() {
       socket.off("typing:start", handleTypingStart);
       socket.off("typing:stop", handleTypingStop);
     };
-  }, [activeId, user?.id, typingUserId]);
+  }, [activeId, myId, typingUserId]);
 
   useEffect(() => {
     if (threadRef.current) threadRef.current.scrollTop = threadRef.current.scrollHeight;
@@ -274,14 +275,16 @@ export default function ChatPage() {
                   messages.map((m) => {
                     const senderId = typeof m.sender === "object" ? m.sender?._id : m.sender;
                     const senderName = typeof m.sender === "object" ? m.sender?.name : null;
-                    const isSelf = senderId === user?.id;
-                    const showName = !isSelf && activeConversation.type !== "direct" && senderName;
+                    const isSelf = senderId === myId;
+                    const showName = activeConversation.type !== "direct" && (senderName || isSelf);
                     const isImage = m.attachmentType?.startsWith("image/");
                     return (
                       <div key={m._id} className={`flex ${isSelf ? "justify-end" : "justify-start"}`}>
                         <div className={`max-w-[70%] space-y-1 ${isSelf ? "items-end flex flex-col" : ""}`}>
                           {showName && (
-                            <span className="text-[11px] font-bold text-primary px-1">{senderName}</span>
+                            <span className="text-[11px] font-bold text-primary px-1">
+                              {isSelf ? "You" : senderName}
+                            </span>
                           )}
                           <div
                             className={`p-3 rounded-2xl ${

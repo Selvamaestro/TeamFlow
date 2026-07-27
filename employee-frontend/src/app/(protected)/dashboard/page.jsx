@@ -221,10 +221,10 @@ export default function DashboardPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-label-sm">
                     <span className="text-on-surface-variant">Overall Progress</span>
-                    <span className="font-bold text-primary">{projectProgress}%</span>
+                    <span className="font-bold text-primary">{currentProject.progress}%</span>
                   </div>
                   <div className="w-full bg-surface-container-highest h-2 rounded-full overflow-hidden">
-                    <div className="bg-primary h-full rounded-full" style={{ width: `${projectProgress}%` }} />
+                    <div className="bg-primary h-full rounded-full" style={{ width: `${currentProject.progress}%` }} />
                   </div>
                 </div>
               </section>

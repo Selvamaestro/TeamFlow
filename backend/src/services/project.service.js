@@ -237,21 +237,44 @@ async function setTeamLeader(project, userId) {
   return project;
 }
 
-// Team Leader of the project, Manager, CEO. Progress is read by everyone with
-// project access already (CEO, manager, HR, teamLeader, members) via getProject.
-async function updateProgress(project, requester, projectRoleFlags, progress) {
-  const { isPrivileged, isTeamLeader } = projectRoleFlags;
-  if (!isPrivileged && !isTeamLeader) {
-    throw new ForbiddenError("Only the Team Leader (or Manager/CEO) can update project progress");
+const PROGRESS_AREAS = ["frontend", "backend", "database"];
+
+function normalizeProgressValue(value, label) {
+  const num = Number(value);
+  if (Number.isNaN(num) || num < 0 || num > 100) {
+    throw new BadRequestError(`${label} progress must be a number between 0 and 100`);
+  }
+  return num;
+}
+
+// ONLY the project's Team Leader can update per-area progress. Manager/CEO/HR
+// (and everyone else with project access) can only view it. `progress` is
+// always recomputed as the average of the three areas.
+async function updateProgress(project, requester, projectRoleFlags, breakdown) {
+  const { isTeamLeader } = projectRoleFlags;
+  if (!isTeamLeader) {
+    throw new ForbiddenError("Only the project's Team Leader can update progress");
   }
 
-  const value = Number(progress);
-  if (Number.isNaN(value) || value < 0 || value > 100) {
-    throw new BadRequestError("progress must be a number between 0 and 100");
+  const current = project.progressBreakdown || {};
+  const next = { ...current };
+
+  let touched = false;
+  for (const area of PROGRESS_AREAS) {
+    if (breakdown[area] !== undefined) {
+      next[area] = normalizeProgressValue(breakdown[area], area);
+      touched = true;
+    }
+  }
+  if (!touched) {
+    throw new BadRequestError("Provide at least one of frontend, backend, database");
   }
 
-  project.progress = value;
-  if (value >= 100 && project.status !== "completed") {
+  project.progressBreakdown = next;
+  const average = PROGRESS_AREAS.reduce((sum, area) => sum + (next[area] || 0), 0) / PROGRESS_AREAS.length;
+  project.progress = Math.round(average);
+
+  if (project.progress >= 100 && project.status !== "completed") {
     project.status = "completed";
   }
   await project.save();

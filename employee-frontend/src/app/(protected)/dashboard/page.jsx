@@ -66,16 +66,46 @@ export default function DashboardPage() {
 
   const totalPoints = useMemo(() => rewards.reduce((sum, r) => sum + (r.points || 0), 0), [rewards]);
 
+  const teamLeaderId = currentProject?.teamLeader
+    ? String(currentProject.teamLeader._id || currentProject.teamLeader)
+    : null;
+  const isTeamLeader = Boolean(teamLeaderId && user && teamLeaderId === user.id);
+
+  // Team Leaders get back every task on the project (backend doesn't filter
+  // for them) — split that into "assigned to me" vs "assigned to my team" so
+  // a teammate's task never shows up looking like the leader's own task.
+  // Plain employees already only ever get their own tasks from the API, so
+  // myTasks === tasks for them and teamTasks stays empty.
+  const myTasks = useMemo(
+    () =>
+      tasks.filter((t) => {
+        const assigneeId = String(t.assignedTo?._id || t.assignedTo || "");
+        return assigneeId === user?.id;
+      }),
+    [tasks, user]
+  );
+  const teamTasks = useMemo(
+    () =>
+      isTeamLeader
+        ? tasks.filter((t) => {
+            const assigneeId = String(t.assignedTo?._id || t.assignedTo || "");
+            return assigneeId !== user?.id;
+          })
+        : [],
+    [tasks, user, isTeamLeader]
+  );
+
   const projectProgress = useMemo(() => {
     if (tasks.length === 0) return 0;
     const approved = tasks.filter((t) => t.status === "approved").length;
     return Math.round((approved / tasks.length) * 100);
   }, [tasks]);
 
-  // The task this employee should be reporting progress against right now.
+  // The task this employee should be reporting progress against right now —
+  // always one of THEIR OWN tasks, never a teammate's.
   const activeTask = useMemo(
-    () => tasks.find((t) => t.status === "todo" || t.status === "in_progress"),
-    [tasks]
+    () => myTasks.find((t) => t.status === "todo" || t.status === "in_progress"),
+    [myTasks]
   );
 
   const upcomingDeadlines = useMemo(() => {
@@ -234,22 +264,40 @@ export default function DashboardPage() {
               <div className="flex justify-between items-center mb-6">
                 <h3 className="font-headline-md text-headline-md text-primary">Your Tasks</h3>
                 <span className="text-label-sm text-on-surface-variant">
-                  {tasks.filter((t) => ["submitted", "approved"].includes(t.status)).length} of {tasks.length}{" "}
-                  completed
+                  {myTasks.filter((t) => ["submitted", "approved"].includes(t.status)).length} of{" "}
+                  {myTasks.length} completed
                 </span>
               </div>
               <div className="space-y-4">
-                {tasks.length === 0 ? (
+                {myTasks.length === 0 ? (
                   <p className="text-label-md text-on-surface-variant">
                     No tasks assigned to you on this project yet.
                   </p>
                 ) : (
-                  tasks.map((task) => (
+                  myTasks.map((task) => (
                     <TaskListItem key={task._id} task={task} onToggle={handleToggleTask} />
                   ))
                 )}
               </div>
             </section>
+
+            {isTeamLeader && (
+              <section className="w-full bg-white border border-outline-variant rounded-[16px] p-8 shadow-sm">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="font-headline-md text-headline-md text-primary">Team Members' Tasks</h3>
+                  <span className="text-label-sm text-on-surface-variant">
+                    {teamTasks.filter((t) => t.status === "approved").length} of {teamTasks.length} completed
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {teamTasks.length === 0 ? (
+                    <p className="text-label-md text-on-surface-variant">No tasks assigned to your team yet.</p>
+                  ) : (
+                    teamTasks.map((task) => <TeamTaskRow key={task._id} task={task} />)
+                  )}
+                </div>
+              </section>
+            )}
 
             <section className="w-full bg-surface-container-low border border-outline-variant rounded-[16px] p-8 shadow-sm flex flex-col justify-between min-h-[400px]">
               <div>
@@ -329,5 +377,43 @@ export default function DashboardPage() {
         </div>
       </div>
     </EmployeeLayout>
+  );
+}
+
+const TEAM_TASK_STATUS_STYLES = {
+  todo: "bg-surface-container text-on-surface-variant",
+  in_progress: "bg-secondary-container text-on-secondary-container",
+  submitted: "bg-tertiary-fixed text-tertiary",
+  approved: "bg-green-100 text-green-700",
+  rejected: "bg-error-container text-error",
+};
+
+// Read-only row for a teammate's task on the Team Leader's dashboard — no
+// self-toggle checkbox, since only the assignee can move their own task.
+function TeamTaskRow({ task }) {
+  const assignee = task.assignedTo && typeof task.assignedTo === "object" ? task.assignedTo : null;
+  return (
+    <div className="flex items-center justify-between p-3 hover:bg-surface-container-low rounded-lg transition-all">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="w-7 h-7 shrink-0 rounded-full bg-secondary-container flex items-center justify-center text-primary text-[11px] font-bold overflow-hidden">
+          {assignee?.avatarUrl ? (
+            <img src={assignee.avatarUrl} alt={assignee.name} className="w-full h-full object-cover" />
+          ) : (
+            assignee?.name?.[0]?.toUpperCase() || "?"
+          )}
+        </div>
+        <div className="min-w-0">
+          <p className="font-label-md text-on-surface truncate">{task.title}</p>
+          <p className="text-label-sm text-on-surface-variant truncate">{assignee?.name || "Unassigned"}</p>
+        </div>
+      </div>
+      <span
+        className={`shrink-0 px-2 py-1 text-label-sm rounded font-semibold capitalize ${
+          TEAM_TASK_STATUS_STYLES[task.status] || TEAM_TASK_STATUS_STYLES.todo
+        }`}
+      >
+        {task.status.replace("_", " ")}
+      </span>
+    </div>
   );
 }

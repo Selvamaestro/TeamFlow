@@ -26,6 +26,12 @@ const TASK_STATUS_STYLES = {
   rejected: "bg-error-container text-error",
 };
 
+const PROGRESS_AREAS = [
+  { key: "frontend", label: "Frontend", icon: "web" },
+  { key: "backend", label: "Backend", icon: "dns" },
+  { key: "database", label: "Database", icon: "storage" },
+];
+
 const PRIORITY_STYLES = {
   low: "text-on-surface-variant",
   medium: "text-secondary",
@@ -60,13 +66,17 @@ export default function ProjectDetailPage() {
   });
   const [isAssigning, setIsAssigning] = useState(false);
 
-  const [progressInput, setProgressInput] = useState(0);
+  const [progressInput, setProgressInput] = useState({ frontend: 0, backend: 0, database: 0 });
   const [isSavingProgress, setIsSavingProgress] = useState(false);
+
+  const [selectedTask, setSelectedTask] = useState(null); // task detail modal
 
   const teamLeaderId = project?.teamLeader ? String(project.teamLeader._id || project.teamLeader) : null;
   const isTeamLeader = Boolean(teamLeaderId && user && teamLeaderId === user.id);
   const isPrivileged = ["manager", "ceo", "hr"].includes(user?.role);
   const canManage = isTeamLeader || isPrivileged;
+  // Only the Team Leader can edit the frontend/backend/database progress split.
+  const canEditProgress = isTeamLeader;
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -74,7 +84,11 @@ export default function ProjectDetailPage() {
     try {
       const proj = await projectApi.getProject(id);
       setProject(proj);
-      setProgressInput(proj.progress ?? 0);
+      setProgressInput({
+        frontend: proj.progressBreakdown?.frontend ?? 0,
+        backend: proj.progressBreakdown?.backend ?? 0,
+        database: proj.progressBreakdown?.database ?? 0,
+      });
       setEditForm({
         title: proj.title || "",
         description: proj.description || "",
@@ -113,6 +127,15 @@ export default function ProjectDetailPage() {
   const approvedCount = tasks.filter((t) => t.status === "approved").length;
   const taskCompletion = tasks.length ? Math.round((approvedCount / tasks.length) * 100) : 0;
   const progress = project?.progress ?? 0;
+  const savedBreakdown = {
+    frontend: project?.progressBreakdown?.frontend ?? 0,
+    backend: project?.progressBreakdown?.backend ?? 0,
+    database: project?.progressBreakdown?.database ?? 0,
+  };
+  const progressUnchanged =
+    progressInput.frontend === savedBreakdown.frontend &&
+    progressInput.backend === savedBreakdown.backend &&
+    progressInput.database === savedBreakdown.database;
 
   async function handleSaveProgress() {
     setIsSavingProgress(true);
@@ -120,6 +143,11 @@ export default function ProjectDetailPage() {
     try {
       const updated = await projectApi.updateProgress(id, progressInput);
       setProject((prev) => ({ ...prev, ...updated }));
+      setProgressInput({
+        frontend: updated.progressBreakdown?.frontend ?? 0,
+        backend: updated.progressBreakdown?.backend ?? 0,
+        database: updated.progressBreakdown?.database ?? 0,
+      });
     } catch (err) {
       setActionError(err.message || "Couldn't update project progress.");
     } finally {
@@ -349,29 +377,61 @@ export default function ProjectDetailPage() {
                     />
                   </div>
                   <p className="text-label-sm text-on-surface-variant">
-                    {taskCompletion}% of tasks approved &middot; visible to CEO, Manager, Team Leader and members.
+                    {taskCompletion}% of tasks approved &middot; average of Frontend / Backend / Database &middot;
+                    visible to CEO, Manager, Team Leader and members.
                   </p>
-                  {canManage && (
-                    <div className="flex items-center gap-3 pt-2">
-                      <input
-                        type="range"
-                        min={0}
-                        max={100}
-                        value={progressInput}
-                        onChange={(e) => setProgressInput(Number(e.target.value))}
-                        className="flex-1 accent-primary"
-                      />
-                      <span className="w-12 text-right font-label-md text-on-surface">{progressInput}%</span>
-                      <button
-                        type="button"
-                        onClick={handleSaveProgress}
-                        disabled={isSavingProgress || progressInput === progress}
-                        className="px-4 py-2 bg-primary text-white rounded-lg font-label-md text-label-sm hover:opacity-90 transition-opacity disabled:opacity-60"
-                      >
-                        {isSavingProgress ? "Saving..." : "Update Progress"}
-                      </button>
-                    </div>
-                  )}
+
+                  <div className="pt-4 space-y-4">
+                    {PROGRESS_AREAS.map((area) => (
+                      <div key={area.key} className="space-y-1.5">
+                        <div className="flex justify-between items-center">
+                          <span className="font-label-md text-label-md text-on-surface flex items-center gap-2">
+                            <span className="material-symbols-outlined text-[18px] text-primary">{area.icon}</span>
+                            {area.label}
+                          </span>
+                          <span className="font-label-md text-label-sm text-on-surface-variant">
+                            {canEditProgress ? progressInput[area.key] : savedBreakdown[area.key]}%
+                          </span>
+                        </div>
+                        {canEditProgress ? (
+                          <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            value={progressInput[area.key]}
+                            onChange={(e) =>
+                              setProgressInput((prev) => ({ ...prev, [area.key]: Number(e.target.value) }))
+                            }
+                            className="w-full accent-primary"
+                          />
+                        ) : (
+                          <div className="w-full bg-surface-container rounded-full h-2">
+                            <div
+                              className="bg-secondary h-2 rounded-full transition-all duration-700 ease-out"
+                              style={{ width: `${savedBreakdown[area.key]}%` }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {canEditProgress ? (
+                      <div className="flex justify-end pt-1">
+                        <button
+                          type="button"
+                          onClick={handleSaveProgress}
+                          disabled={isSavingProgress || progressUnchanged}
+                          className="px-4 py-2 bg-primary text-white rounded-lg font-label-md text-label-sm hover:opacity-90 transition-opacity disabled:opacity-60"
+                        >
+                          {isSavingProgress ? "Saving..." : "Update Progress"}
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-label-sm text-on-surface-variant italic">
+                        Only the Team Leader can update these values.
+                      </p>
+                    )}
+                  </div>
                 </div>
               </>
             )}
@@ -479,10 +539,14 @@ export default function ProjectDetailPage() {
                     >
                       <option value="">Select a member</option>
                       {members
-                        .filter((m) => (project.members || []).some((pm) => String(pm?._id || pm) === m._id))
+                        .filter(
+                          (m) =>
+                            (project.members || []).some((pm) => String(pm?._id || pm) === m._id) ||
+                            m._id === teamLeaderId
+                        )
                         .map((m) => (
                           <option key={m._id} value={m._id}>
-                            {m.name}
+                            {m._id === teamLeaderId ? `${m.name} (You, Team Leader)` : m.name}
                           </option>
                         ))}
                     </select>
@@ -566,8 +630,15 @@ export default function ProjectDetailPage() {
                   </thead>
                   <tbody className="divide-y divide-outline-variant">
                     {tasks.map((task) => {
-                      const assignee = members.find((m) => m._id === task.assignedTo);
-                      const isMine = task.assignedTo === user?.id;
+                      // task.assignedTo comes back POPULATED (a full user object
+                      // { _id, name, avatarUrl, ... }), not a raw id string — use
+                      // it directly instead of matching it against members[].
+                      const assignee =
+                        task.assignedTo && typeof task.assignedTo === "object"
+                          ? task.assignedTo
+                          : members.find((m) => m._id === task.assignedTo);
+                      const assignedToId = String(task.assignedTo?._id || task.assignedTo || "");
+                      const isMine = assignedToId === user?.id;
                       return (
                         <tr key={task._id} className="hover:bg-surface-container-lowest transition-colors">
                           <td className="px-6 py-4">
@@ -622,12 +693,21 @@ export default function ProjectDetailPage() {
                             </span>
                           </td>
                           <td className="px-6 py-4">
-                            <TaskActions
-                              task={task}
-                              isMine={isMine}
-                              canReview={isTeamLeader || isPrivileged}
-                              onChange={handleTaskStatusChange}
-                            />
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedTask(task)}
+                                className="px-3 py-1.5 border border-outline-variant text-on-surface rounded-lg font-label-sm hover:bg-surface-container transition-colors"
+                              >
+                                View
+                              </button>
+                              <TaskActions
+                                task={task}
+                                isMine={isMine}
+                                canReview={isTeamLeader || isPrivileged}
+                                onChange={handleTaskStatusChange}
+                              />
+                            </div>
                           </td>
                         </tr>
                       );
@@ -691,6 +771,23 @@ export default function ProjectDetailPage() {
           </div>
         </aside>
       </div>
+
+      {selectedTask && (
+        <TaskDetailModal
+          task={selectedTask}
+          assignee={
+            selectedTask.assignedTo && typeof selectedTask.assignedTo === "object"
+              ? selectedTask.assignedTo
+              : members.find((m) => m._id === selectedTask.assignedTo)
+          }
+          canReview={isTeamLeader || isPrivileged}
+          onClose={() => setSelectedTask(null)}
+          onChange={async (task, status, note) => {
+            await handleTaskStatusChange(task, status, note);
+            setSelectedTask(null);
+          }}
+        />
+      )}
     </EmployeeLayout>
   );
 }
@@ -762,4 +859,162 @@ function TaskActions({ task, isMine, canReview, onChange }) {
   }
 
   return <span className="text-label-sm text-on-surface-variant">&mdash;</span>;
+}
+
+// Full task detail: description, submission note, attachments. Any team
+// member can open this for their own task; the Team Leader (or Manager/CEO)
+// can open it for any teammate's task and approve/reject right from here.
+function TaskDetailModal({ task, assignee, canReview, onClose, onChange }) {
+  const [note, setNote] = useState(task.submissionNote || "");
+  const [isBusy, setIsBusy] = useState(false);
+
+  async function run(status) {
+    setIsBusy(true);
+    try {
+      await onChange(task, status, status === "rejected" ? note : undefined);
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-xl max-w-lg w-full max-h-[85vh] overflow-y-auto card-shadow"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-6 border-b border-outline-variant flex items-start justify-between gap-4">
+          <div>
+            <h3 className="font-headline-md text-headline-md text-primary">{task.title}</h3>
+            <span
+              className={`inline-block mt-2 px-3 py-1 rounded-full font-label-sm text-label-sm capitalize ${
+                TASK_STATUS_STYLES[task.status] || TASK_STATUS_STYLES.todo
+              }`}
+            >
+              {task.status.replace("_", " ")}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-on-surface-variant hover:text-primary transition-colors"
+          >
+            <span className="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-1">
+                Assignee
+              </p>
+              <p className="font-label-md text-on-surface">{assignee?.name || "Unknown"}</p>
+            </div>
+            <div>
+              <p className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-1">
+                Priority
+              </p>
+              <p className={`font-label-md capitalize ${PRIORITY_STYLES[task.priority] || PRIORITY_STYLES.medium}`}>
+                {task.priority}
+              </p>
+            </div>
+            <div>
+              <p className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-1">
+                Due Date
+              </p>
+              <p className="font-label-md text-on-surface">
+                {task.dueDate ? formatDueLabel(task.dueDate) : "\u2014"}
+              </p>
+            </div>
+            <div>
+              <p className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-1">
+                Last Updated
+              </p>
+              <p className="font-label-md text-on-surface">
+                {task.updatedAt ? formatDate(task.updatedAt) : "\u2014"}
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <p className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-1">
+              Description
+            </p>
+            <p className="font-body-md text-body-md text-on-surface whitespace-pre-wrap">
+              {task.description || "No description provided."}
+            </p>
+          </div>
+
+          {task.submissionNote && (
+            <div>
+              <p className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-1">
+                Submission Note
+              </p>
+              <p className="font-body-md text-body-md text-on-surface whitespace-pre-wrap bg-surface-container-low rounded-lg p-3">
+                {task.submissionNote}
+              </p>
+            </div>
+          )}
+
+          {(task.attachments || []).length > 0 && (
+            <div>
+              <p className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-2">
+                Attachments
+              </p>
+              <div className="space-y-2">
+                {task.attachments.map((att, idx) => (
+                  <a
+                    key={att.url || idx}
+                    href={att.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-3 p-3 bg-surface-container-low rounded-lg hover:bg-surface-container transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-primary">attach_file</span>
+                    <span className="font-label-md text-on-surface flex-1 truncate">{att.name}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {canReview && task.status === "submitted" && (
+            <div className="pt-2 border-t border-outline-variant space-y-3">
+              <div>
+                <label className="block text-label-md text-on-surface mb-2">Rejection note (optional)</label>
+                <input
+                  className="w-full px-4 py-2.5 rounded-lg border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary-fixed outline-none font-body-md"
+                  placeholder="Add a note if rejecting..."
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                />
+              </div>
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  disabled={isBusy}
+                  onClick={() => run("rejected")}
+                  className="px-5 py-2 bg-error-container text-error rounded-lg font-label-md hover:opacity-90 transition-opacity disabled:opacity-60"
+                >
+                  Reject
+                </button>
+                <button
+                  type="button"
+                  disabled={isBusy}
+                  onClick={() => run("approved")}
+                  className="px-5 py-2 bg-primary text-white rounded-lg font-label-md shadow-md hover:opacity-90 transition-opacity disabled:opacity-60"
+                >
+                  Approve
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }

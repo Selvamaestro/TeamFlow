@@ -65,8 +65,10 @@ async function createTask(app, project, requester, { title, description, assigne
   }
 
   const isMember = project.members.some((m) => String(m._id || m) === assignedTo);
-  if (!isMember) {
-    throw new BadRequestError("assignedTo must be one of project.members");
+  const teamLeaderId = project.teamLeader ? String(project.teamLeader._id || project.teamLeader) : null;
+  const isSelfAssignByTeamLeader = isTeamLeader && assignedTo === teamLeaderId;
+  if (!isMember && !isSelfAssignByTeamLeader) {
+    throw new BadRequestError("assignedTo must be one of project.members (or the Team Leader themselves)");
   }
 
   const task = await Task.create({

@@ -17,9 +17,10 @@ export function getProject(id) {
  }
 
 // PATCH /api/projects/:id/progress -> { project }
-// Team Leader of the project (or Manager/CEO). body: { progress: 0-100 }
-export function updateProgress(id, progress) {
-  return axiosClient.patch(`/projects/${id}/progress`, { progress }).then((res) => res.data.project);
+// Team Leader of the project ONLY. body: { frontend?, backend?, database? } (each 0-100)
+// project.progress is recomputed server-side as the average of the three.
+export function updateProgress(id, breakdown) {
+  return axiosClient.patch(`/projects/${id}/progress`, breakdown).then((res) => res.data.project);
 }
 
 // POST /api/projects/:id/documents (multipart/form-data) -> { document }

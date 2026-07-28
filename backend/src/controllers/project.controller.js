@@ -52,13 +52,21 @@ async function updateProject(req, res, next) {
   }
 }
 
-// PATCH /projects/:id/progress  (Team Leader of that project, Manager, CEO)
+// PATCH /projects/:id/progress  (Team Leader of that project ONLY)
+// body: { frontend?, backend?, database? } — each 0-100. project.progress is
+// recomputed server-side as their average.
 async function updateProgress(req, res, next) {
   try {
-    const { progress } = req.body;
-    if (progress === undefined) return res.status(400).json({ message: "progress is required" });
+    const { frontend, backend, database } = req.body;
+    if (frontend === undefined && backend === undefined && database === undefined) {
+      return res.status(400).json({ message: "Provide at least one of frontend, backend, database" });
+    }
 
-    const project = await projectService.updateProgress(req.project, req.user, req.projectRoleFlags, progress);
+    const project = await projectService.updateProgress(req.project, req.user, req.projectRoleFlags, {
+      frontend,
+      backend,
+      database,
+    });
     return res.status(200).json({ project: sanitizeProject(project, req.user.role) });
   } catch (err) {
     handleServiceError(err, res, next);

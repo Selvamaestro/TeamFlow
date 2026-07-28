@@ -90,13 +90,22 @@ const projectSchema = new mongoose.Schema(
 
     documents: [documentSubSchema],
 
-    // 0-100, set by the project's Team Leader (or Manager/CEO for oversight).
-    // Visible to everyone with project access: CEO, Manager, HR, Team Leader, members.
+    // 0-100, derived automatically as the average of progressBreakdown
+    // (frontend/backend/database). Visible to everyone with project access:
+    // CEO, Manager, HR, Team Leader, members.
     progress: {
       type: Number,
       default: 0,
       min: 0,
       max: 100,
+    },
+
+    // Per-area progress, set ONLY by the project's Team Leader. `progress`
+    // above is always kept as the average of these three.
+    progressBreakdown: {
+      frontend: { type: Number, default: 0, min: 0, max: 100 },
+      backend: { type: Number, default: 0, min: 0, max: 100 },
+      database: { type: Number, default: 0, min: 0, max: 100 },
     },
   },
   { timestamps: true }

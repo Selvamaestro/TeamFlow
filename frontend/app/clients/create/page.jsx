@@ -173,7 +173,6 @@ export default function CreateClientPage() {
                                     onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                                 >
                                     <option value="active">Active</option>
-                                    <option value="inactive">Inactive</option>
                                 </select>
                             </div>
 

@@ -53,14 +53,6 @@ async function createProject(creator, data) {
     members,
   } = data;
 
-  if (client) {
-    const Client = require("../models/Client");
-    const clientDoc = await Client.findById(client);
-    if (clientDoc && (clientDoc.status || "active").toLowerCase() === "inactive") {
-      throw new BadRequestError("the client is inactive");
-    }
-  }
-
   const now = new Date();
   const effectiveStartDate = startDate ? new Date(startDate) : now;
   const effectiveDueDate = dueDate ? new Date(dueDate) : (endDate ? new Date(endDate) : null);
@@ -149,15 +141,28 @@ async function updateProject(project, requester, projectRoleFlags, data) {
     throw new ForbiddenError("Forbidden");
   }
 
+  if (data.clientId !== undefined && data.client === undefined) {
+    data.client = data.clientId;
+  }
+  if (data.teamLeaderId !== undefined && data.teamLeader === undefined) {
+    data.teamLeader = data.teamLeaderId;
+  }
+
   for (const field of GENERAL_EDITABLE_FIELDS) {
-    if (data[field] !== undefined) project[field] = data[field];
+    if (data[field] !== undefined) {
+      if ((field === "teamLeader" || field === "client") && (data[field] === "" || data[field] === null)) {
+        project[field] = null;
+      } else {
+        project[field] = data[field];
+      }
+    }
   }
 
   // Ensure numerical types
-  if (data.expenses !== undefined) project.expenses = Number(project.expenses) || 0;
-  if (data.paidAmount !== undefined) project.paidAmount = Number(project.paidAmount) || 0;
-  if (data.revenue !== undefined) project.revenue = Number(project.revenue) || 0;
-  if (data.budget !== undefined) project.budget = Number(project.budget) || 0;
+  if (data.expenses !== undefined) project.expenses = Number(data.expenses) || 0;
+  if (data.paidAmount !== undefined) project.paidAmount = Number(data.paidAmount) || 0;
+  if (data.revenue !== undefined) project.revenue = Number(data.revenue) || 0;
+  if (data.budget !== undefined) project.budget = Number(data.budget) || 0;
 
   const targetVal = Number(project.revenue) || Number(project.budget) || 0;
   const numericPaid = Number(project.paidAmount) || 0;
@@ -189,6 +194,24 @@ async function updateProject(project, requester, projectRoleFlags, data) {
       { name: data.title }
     );
   }
+
+  if (data.members !== undefined || data.teamLeader !== undefined) {
+    const allParticipantIds = new Set([
+      String(project.manager || requester.id),
+      ...(project.teamLeader ? [String(project.teamLeader._id || project.teamLeader)] : []),
+      ...(Array.isArray(project.members) ? project.members.map((m) => String(m._id || m)) : []),
+    ]);
+    await Conversation.updateOne(
+      { project: project._id, type: "project_group" },
+      { participants: Array.from(allParticipantIds) }
+    );
+  }
+
+  await project.populate([
+    { path: "teamLeader", select: "name email employeeId avatarUrl role designation department" },
+    { path: "members", select: "name email employeeId avatarUrl role designation department" },
+    { path: "client", select: "name company email" },
+  ]);
 
   return project;
 }

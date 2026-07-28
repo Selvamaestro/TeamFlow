@@ -97,7 +97,7 @@ export default function ProjectsPage() {
                             progress: typeof p.progress === "number" ? p.progress : (p.status === "completed" ? 100 : 0),
                             dueDate: p.dueDate ? new Date(p.dueDate).toLocaleDateString() : "Dec 2026",
                             actionLabel: "View Details",
-                            category: p.status === "archived" ? "archived" : "active",
+                            category: p.status === "archived" ? "archived" : (p.status === "completed" ? "completed" : "active"),
                             starred: true,
                             revenue: p.revenue ? `₹${Number(p.revenue).toLocaleString()}` : "₹50,000"
                         };
@@ -172,7 +172,8 @@ export default function ProjectsPage() {
     const filteredProjects = projects.filter(p => {
         const matchesCategory =
             selectedCategory === "active" ? p.category === "active" :
-                selectedCategory === "archived" ? p.category === "archived" : true;
+                selectedCategory === "completed" ? p.category === "completed" :
+                    selectedCategory === "archived" ? p.category === "archived" : true;
         const matchesSearch =
             p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             p.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -225,6 +226,19 @@ export default function ProjectsPage() {
                                 </li>
                                 <li>
                                     <div
+                                        onClick={() => setSelectedCategory("completed")}
+                                        className={`secondary-nav-item ${selectedCategory === "completed" ? "active" : ""}`}
+                                    >
+                                        <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                            <CheckCircle2 size={18} /> Completed Projects
+                                        </span>
+                                        <span className="badge green" style={{ fontSize: "11px", padding: "2px 8px", background: "#e6f4ea", color: "#169c52" }}>
+                                            {projects.filter(p => p.category === "completed").length}
+                                        </span>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div
                                         onClick={() => setSelectedCategory("archived")}
                                         className={`secondary-nav-item ${selectedCategory === "archived" ? "active" : ""}`}
                                     >
@@ -247,7 +261,7 @@ export default function ProjectsPage() {
                             <div>
                                 <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
                                     <h1 style={{ color: "#002045", fontSize: "36px", margin: 0 }}>
-                                        {selectedCategory === "active" ? "Active Initiatives" : "Archived Projects"}
+                                        {selectedCategory === "active" ? "Active Initiatives" : selectedCategory === "completed" ? "Completed Projects" : "Archived Projects"}
                                     </h1>
                                     <span className="badge green">Live MongoDB Data</span>
                                 </div>

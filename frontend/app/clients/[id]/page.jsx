@@ -646,7 +646,6 @@ export default function ClientDetailPage({ params }) {
                                             style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px", outline: "none", background: "#fff" }}
                                         >
                                             <option value="active">Active</option>
-                                            <option value="inactive">Inactive</option>
                                         </select>
                                     </div>
                                 </div>

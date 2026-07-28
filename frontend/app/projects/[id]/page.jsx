@@ -7,6 +7,7 @@ import "../../dashboard/dashboard.css";
 import Sidebar from "@/components/Sidebar";
 import { projectService } from "../../../services/projectService";
 import { userService } from "../../../services/userService";
+import { clientService } from "../../../services/clientService";
 import { taskService } from "../../../services/taskService";
 import api from "@/lib/api";
 import {
@@ -53,6 +54,7 @@ export default function ProjectDetailPage({ params }) {
     const projectId = resolvedParams.id;
 
     const [dbProject, setDbProject] = useState(null);
+    const [dbClients, setDbClients] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [completedTasks, setCompletedTasks] = useState([]);
     const [isLoadingTasks, setIsLoadingTasks] = useState(true);
@@ -140,9 +142,9 @@ export default function ProjectDetailPage({ params }) {
         }
     };
 
-    // Load available Team Leaders and Employees for edit modal assignment
+    // Load available Team Leaders, Employees, and Clients for edit modal assignment
     useEffect(() => {
-        async function fetchUsersList() {
+        async function fetchInitialListData() {
             try {
                 const userRes = await userService.getUsers().catch(() => null);
                 if (userRes?.users && Array.isArray(userRes.users)) {
@@ -152,11 +154,15 @@ export default function ProjectDetailPage({ params }) {
                     const staff = allUsers.filter(u => u.role === "employee");
                     setDbEmployees(staff);
                 }
+                const clientRes = await clientService.getClients().catch(() => null);
+                if (clientRes?.clients && Array.isArray(clientRes.clients)) {
+                    setDbClients(clientRes.clients);
+                }
             } catch (err) {
-                console.warn("User list fetch notice:", err.message);
+                console.warn("Initial list fetch notice:", err.message);
             }
         }
-        fetchUsersList();
+        fetchInitialListData();
     }, []);
 
     // Load Live Project from MongoDB
@@ -235,10 +241,15 @@ export default function ProjectDetailPage({ params }) {
                     }))
                     : [];
 
+                const clientObj = typeof raw.client === "object" ? raw.client : null;
+                const clientId = clientObj ? clientObj._id : (typeof raw.client === "string" ? raw.client : "");
+                const clientName = clientObj ? (clientObj.company || clientObj.name) : "Client Enterprise";
+
                 setDbProject({
                     id: raw._id || raw.id,
                     title: raw.title || "Project Initiative",
-                    client: typeof raw.client === "object" ? (raw.client.company || raw.client.name) : "Client Enterprise",
+                    clientId: clientId,
+                    client: clientName,
                     lead: leadName,
                     leadRole: leadRole,
                     leadAvatar: leadAvatar,
@@ -331,6 +342,7 @@ export default function ProjectDetailPage({ params }) {
         setEditFormData({
             title: dbProject.title || "",
             description: dbProject.description || "",
+            clientId: dbProject.clientId || (dbClients[0] ? dbClients[0]._id : ""),
             status: dbProject.rawStatus || "planning",
             startDate: formatISO(dbProject.rawStartDate) || new Date().toISOString().split("T")[0],
             dueDate: formatISO(dbProject.rawDueDate) || "",
@@ -367,6 +379,7 @@ export default function ProjectDetailPage({ params }) {
             const updatePayload = {
                 title: editFormData.title,
                 description: editFormData.description,
+                client: editFormData.clientId || undefined,
                 status: editFormData.status,
                 startDate: editFormData.startDate ? new Date(editFormData.startDate) : undefined,
                 dueDate: editFormData.dueDate ? new Date(editFormData.dueDate) : undefined,
@@ -946,16 +959,33 @@ export default function ProjectDetailPage({ params }) {
                             )}
 
                             <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-                                {/* Title */}
-                                <div>
-                                    <label style={{ display: "block", fontSize: "13px", color: "#334155", fontWeight: "bold", marginBottom: "6px" }}>Project Title *</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={editFormData.title}
-                                        onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
-                                        style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px", outline: "none", background: "#fff" }}
-                                    />
+                                {/* Client Account & Title Grid */}
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "13px", color: "#334155", fontWeight: "bold", marginBottom: "6px" }}>Project Title *</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={editFormData.title}
+                                            onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+                                            style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px", outline: "none", background: "#fff" }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "13px", color: "#334155", fontWeight: "bold", marginBottom: "6px" }}>Client Account</label>
+                                        <select
+                                            value={editFormData.clientId}
+                                            onChange={(e) => setEditFormData({ ...editFormData, clientId: e.target.value })}
+                                            style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px", outline: "none", background: "#fff" }}
+                                        >
+                                            <option value="">Unassigned Client</option>
+                                            {dbClients.map(c => (
+                                                <option key={c._id} value={c._id}>
+                                                    {c.company || c.name} ({c.email})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
 
                                 {/* Description */}

@@ -1,0 +1,498 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import api from "@/lib/api";
+import Link from "next/link";
+import "./dashboard.css";
+import Sidebar from "@/components/Sidebar";
+import Navbar from "@/components/Navbar";
+import { getAvatarUrl } from "@/lib/utils";
+import { useRouter } from "next/navigation";
+import {
+    LayoutDashboard,
+    Users,
+    IndianRupee,
+    FolderKanban,
+    CalendarDays,
+    MessageSquare,
+    Building2,
+    Bell,
+    CircleHelp,
+    Settings,
+    LogOut,
+    ClipboardList,
+    Search,
+    Plus,
+} from "lucide-react";
+import {
+    ResponsiveContainer,
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    Tooltip,
+    CartesianGrid,
+} from "recharts";
+
+export default function Dashboard() {
+    const [dashboard, setDashboard] = useState(null);
+    const [user, setUser] = useState(null);
+    const [leaveRequests, setLeaveRequests] = useState([]);
+    const [projects, setProjects] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [weeklySeries, setWeeklySeries] = useState([]);
+    const [agenda, setAgenda] = useState([]);
+    const router = useRouter();
+
+
+    useEffect(() => {
+
+        async function fetchDashboardData() {
+
+            try {
+
+                const userRes = await api.get("/auth/me");
+                const viewerRole = userRes.data.user?.role;
+                setUser(userRes.data.user);
+
+                const [overviewRes, leaveRes, projectRes, agendaRes] = await Promise.allSettled([
+                    api.get("/dashboard/overview"),
+                    api.get("/leave?status=pending"),
+                    api.get("/projects"),
+                    api.get("/agenda"),
+                ]);
+
+                if (overviewRes.status === "fulfilled") setDashboard(overviewRes.value.data);
+                if (leaveRes.status === "fulfilled") setLeaveRequests(leaveRes.value.data.requests || []);
+                if (projectRes.status === "fulfilled") setProjects(projectRes.value.data.projects || []);
+                if (agendaRes.status === "fulfilled") setAgenda(agendaRes.value.data.agenda || []);
+
+                if (viewerRole === "ceo") {
+                    try {
+                        const revenueRes = await api.get("/dashboard/revenue");
+                        setWeeklySeries(revenueRes.data.weeklySeries || []);
+                    } catch (err) {
+                        console.warn("Failed to fetch revenue series:", err);
+                    }
+                }
+            } catch (error) {
+
+                console.error("Dashboard Error:", error);
+
+            } finally {
+
+                setLoading(false);
+
+            }
+
+        }
+
+        fetchDashboardData();
+
+    }, []);
+    const handleLeaveDecision = async (id, status) => {
+        try {
+            await api.patch(`/leave/${id}/decision`, { status });
+            setLeaveRequests(prev =>
+                prev.map(leave => (leave._id === id || leave.id === id) ? { ...leave, status } : leave)
+            );
+        } catch (err) {
+            console.error("Failed to update leave decision from dashboard", err);
+        }
+    };
+
+    if (loading) {
+        return <h2>Loading Dashboard...</h2>;
+    }
+
+    return (
+        <div className="dashboard-container">
+            {/* ================= Sidebar ================= */}
+            <Sidebar active="dashboard" />
+
+            {/* ================= Main ================= */}
+
+            <div className="main-content">
+
+                {/* Header */}
+                <Navbar
+                    user={user}
+                    placeholder="Search enterprise data..."
+                    helpText="Executive Dashboard — Real-time performance metrics, workforce attendance, financial summaries, and daily agenda."
+                />
+
+                {/* Dashboard */}
+
+                <section className="dashboard">
+
+                    <div className="title">
+
+                        <h1>Executive Summary</h1>
+
+                        <p>
+                            Real-time performance metrics for
+                            AdminPanel Enterprise.
+                        </p>
+
+                    </div>
+
+                    <div className="kpi-grid">
+
+                        {/* Card 1 */}
+
+                        <div className="kpi-card">
+
+                            <div className="card-top">
+
+                                <div className="icon-box employee-icon">
+                                    <Users size={28} />
+                                </div>
+
+                                <span className="badge green">
+                                    ▲ +4%
+                                </span>
+
+                            </div>
+
+                            <p className="card-title">
+                                Today's Present Employees
+                            </p>
+
+                            <h2>{dashboard?.attendanceToday}</h2>
+
+                            <div className="progress">
+
+                                <div className="progress-fill employee-progress"></div>
+
+                            </div>
+
+                            <small>
+
+                                Present: {dashboard?.attendanceToday} / {dashboard?.totalEmployees}
+
+                            </small>
+
+                        </div>
+
+
+
+                        {/* Card 2 — CEO only */}
+                        {user?.role === "ceo" && (
+                        <div className="kpi-card">
+
+                            <div className="card-top">
+
+                                <div className="icon-box revenue-icon">
+                                    <IndianRupee size={28} />
+                                </div>
+
+                                <span className="badge green">
+                                    ▲ +12.5%
+                                </span>
+
+                            </div>
+
+                            <p className="card-title">
+                                Month Revenue (MTD)
+                            </p>
+
+                            <h2>
+
+                                ₹ {dashboard?.revenueThisMonth?.toLocaleString() || 0}
+
+                            </h2>
+
+                            <small>
+                                Projected monthly target:
+                                <strong> ₹1.1M</strong>
+                            </small>
+
+                        </div>
+                        )}
+
+
+
+                        {/* Card 3 */}
+
+                        <div className="kpi-card">
+
+                            <div className="card-top">
+
+                                <div className="icon-box project-icon">
+                                    <FolderKanban size={28} />
+                                </div>
+
+                                <span className="badge yellow">
+                                    Steady
+                                </span>
+
+                            </div>
+
+                            <p className="card-title">
+                                Active Client Projects
+                            </p>
+
+                            <h2>{dashboard?.activeProjects}</h2>
+
+                            <div className="avatars">
+
+                                <span></span>
+                                <span></span>
+                                <span></span>
+
+                                <div className="more">
+                                    +12
+                                </div>
+
+                            </div>
+
+                            <small>
+                                3 new projects starting this week.
+                            </small>
+
+                        </div>
+
+                    </div>
+                    <div className="overview-grid">
+
+                        {/* LEFT SIDE */}
+                        <div className="left-panel">
+
+                            <div className="overview-card">
+
+                                {/* Pending Leave */}
+
+                                <div className="section-header">
+                                    <h3>Pending Leave Requests</h3>
+                                    <button onClick={() => router.push("/attendance")}>View All</button>
+                                </div>
+                                {leaveRequests.filter(l => l.status === "pending").length === 0 ? (
+
+                                    <p style={{ padding: "10px 0", color: "#777" }}>No pending leave requests.</p>
+
+                                ) : (
+
+                                    leaveRequests.filter(l => l.status === "pending").slice(0, 2).map((leave) => (
+
+                                        <div className="leave-card" key={leave._id || leave.id}>
+
+                                            <div className="leave-info">
+
+                                                <div className="avatar">
+
+                                                    {leave.user?.name ? leave.user.name.split(" ").map(n => n[0]).join("").toUpperCase() : "L"}
+
+                                                </div>
+
+                                                <div>
+
+                                                    <h4>{leave.user?.name || "Employee"}</h4>
+
+                                                    <p>
+                                                        {leave.type} • {leave.startDate ? new Date(leave.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}
+                                                    </p>
+
+                                                </div>
+
+                                            </div>
+
+                                            <div className="leave-buttons">
+                                                {leave.status === "approved" ? (
+                                                    <span className="badge green">Approved</span>
+                                                ) : leave.status === "rejected" ? (
+                                                    <span className="badge yellow" style={{ background: "#ffeaea", color: "#d63031" }}>Rejected</span>
+                                                ) : (
+                                                    <>
+                                                        <button className="approve" onClick={() => handleLeaveDecision(leave._id || leave.id, "approved")}>
+                                                            Approve
+                                                        </button>
+                                                        <button className="reject" onClick={() => handleLeaveDecision(leave._id || leave.id, "rejected")}>
+                                                            Reject
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
+
+                                        </div>
+
+                                    ))
+
+                                )}
+                            </div>
+                            <div className="overview-card">
+
+                                <div className="section-header">
+                                    <h3>Project Progress</h3>
+                                    <button onClick={() => router.push("/projects")}>View All</button>
+                                </div>
+
+                                {projects.length === 0 ? (
+                                    <p>No active projects.</p>
+                                ) : (
+                                    projects.slice(0, 2).map((project) => (
+                                        <div key={project._id} className="project-card">
+
+                                            <div className="project-progress-item">
+
+                                                <div className="project-header">
+
+                                                    <h4>{project.title}</h4>
+
+                                                    <span>
+                                                        {project.progress + "%"}
+                                                    </span>
+
+                                                </div>
+
+                                                <small>
+                                                    Due{" "}
+                                                    {project.dueDate
+                                                        ? new Date(project.dueDate).toLocaleDateString()
+                                                        : "N/A"}
+                                                </small>
+
+                                                <div className="progress">
+
+                                                    <div
+                                                        className="progress-fill employee-progress"
+                                                        style={{
+                                                            width:
+                                                                project.progress +
+                                                                "%",
+                                                        }}
+                                                    />
+
+                                                </div>
+
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+
+
+
+                        </div>
+
+                        {/* RIGHT SIDE */}
+
+                        <div className="right-panel">
+
+                            {/* Revenue Card — CEO only */}
+                            {user?.role === "ceo" && (
+                            <div className="revenue-card">
+
+                                <h3>Revenue Velocity</h3>
+
+                                <p>Past 7 days performance</p>
+
+                                <div style={{ width: "100%", height: 260 }}>
+
+                                    <ResponsiveContainer>
+
+                                        <BarChart data={weeklySeries}>
+
+                                            <CartesianGrid strokeDasharray="3 3" />
+
+                                            <XAxis dataKey="day" />
+
+                                            <YAxis
+                                                tickFormatter={(value) => `₹${value / 1000}k`}
+                                            />
+
+                                            <Tooltip
+                                                formatter={(value) => [
+                                                    `₹${value.toLocaleString()}`,
+                                                    "Revenue"
+                                                ]}
+                                            />
+
+                                            <Bar
+                                                dataKey="revenue"
+                                                fill="#17305c"
+                                                radius={[8, 8, 0, 0]}
+                                            />
+
+                                        </BarChart>
+
+                                    </ResponsiveContainer>
+
+                                </div>
+
+
+
+                            </div>
+                            )}
+
+                            {/* Agenda */}
+
+                            <div className="agenda-card">
+
+                                <div className="agenda-title">
+
+                                    <div className="agenda-icon">
+                                        <ClipboardList size={24} />
+                                    </div>
+
+                                    <h3>Today's Schedule</h3>
+
+                                </div>
+
+
+
+                                <ul>
+
+                                    {agenda.length === 0 ? (
+
+                                        <p>No events scheduled for today.</p>
+
+                                    ) : (
+
+                                        agenda
+                                            .filter((event) => {
+
+                                                const today = new Date().toDateString();
+
+                                                return (
+                                                    new Date(event.date).toDateString() === today
+                                                );
+
+                                            })
+                                            .map((event) => (
+
+                                                <li key={event._id}>
+
+                                                    <span
+                                                        className={
+                                                            event.type === "Meeting"
+                                                                ? "yellow-dot"
+                                                                : event.type === "Task"
+                                                                    ? "green-dot"
+                                                                    : "blue-dot"
+                                                        }
+                                                    ></span>
+
+                                                    <strong>{event.time}</strong> - {event.title}
+
+                                                </li>
+
+                                            ))
+
+                                    )}
+
+                                </ul>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+            </div>
+
+        </div>
+    );
+}

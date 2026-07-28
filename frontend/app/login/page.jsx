@@ -1,0 +1,227 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import api from "@/lib/api";
+
+import "./login.css";
+
+import {
+    ShieldCheck,
+    Mail,
+    Lock,
+    Eye,
+    EyeOff,
+    LogIn,
+    ShieldAlert,
+    LoaderCircle,
+} from "lucide-react";
+
+export default function LoginPage() {
+    const router = useRouter();
+
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+
+    const [showPassword, setShowPassword] = useState(false);
+
+    const [loading, setLoading] = useState(false);
+
+    const [error, setError] = useState("");
+const handleLogin = async (e) => {
+  e.preventDefault();
+
+  setLoading(true);
+  setError("");
+
+  try {
+    const response = await api.post("/auth/login", {
+      email,
+      password,
+    });
+
+    const { token, user } = response.data;
+    const allowedAdminRoles = ["manager", "hr", "ceo"];
+
+    if (!allowedAdminRoles.includes(user?.role?.toLowerCase())) {
+      setError("Access Denied: Only Manager, HR, and CEO roles are permitted to access the Admin Panel.");
+      return;
+    }
+
+    localStorage.setItem("token", token);
+    localStorage.setItem("teamflow_token", token);
+    localStorage.setItem("user", JSON.stringify(user));
+
+    router.push("/dashboard");
+  } catch (err) {
+    if (!err.response) {
+      setError("Unable to connect to backend server. Please verify backend is running on http://localhost:5000");
+    } else {
+      setError(err.response?.data?.message || "Login failed");
+    }
+  } finally {
+    setLoading(false);
+  }
+};
+
+    return (
+        <div className="login-page">
+
+            {/* Background */}
+
+            <div className="background-overlay"></div>
+
+            {/* Login Container */}
+
+            <main className="login-container">
+
+                {/* Logo */}
+
+                <div className="brand-section">
+
+                    <div className="logo-box">
+                        <ShieldCheck size={32} />
+                    </div>
+
+                    <h1>AdminPanel</h1>
+
+                    <p>Enterprise Management Suite</p>
+
+                </div>
+
+                {/* Login Card */}
+
+                <div className="login-card">
+
+                    <form onSubmit={handleLogin}>
+
+                        {/* Email */}
+
+                        <div className="form-group">
+
+                            <label>Email Address</label>
+
+                            <div className="input-box">
+
+                                <Mail size={18} />
+
+                                <input
+                                    type="email"
+                                    placeholder="ceo@teamflow.test"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    required
+                                />
+
+                            </div>
+
+                        </div>
+
+                        {/* Password */}
+
+                        <div className="form-group">
+
+                            <div className="password-header">
+
+                                <label>Password</label>
+
+                                <a href="#">
+                                    Forgot password?
+                                </a>
+
+                            </div>
+
+                            <div className="input-box">
+
+                                <Lock size={18} />
+
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    placeholder="••••••••"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
+                                />
+
+                                <button
+                                    type="button"
+                                    className="eye-btn"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                >
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                        {/* Login Button */}
+
+                        <button
+                            className="login-btn"
+                            type="submit"
+                            disabled={loading}
+                        >
+
+                            {
+                                loading ?
+
+                                    <>
+
+                                        <LoaderCircle
+                                            size={18}
+                                            className="spinner"
+                                        />
+
+                                        Signing In...
+
+                                    </>
+
+                                    :
+
+                                    <>
+
+                                        Login to Dashboard
+
+                                        <LogIn size={18} />
+
+                                    </>
+
+                            }
+
+                        </button>
+                        {
+                            error &&
+
+                            <p className="error-message">
+
+                                {error}
+
+                            </p>
+
+                        }
+
+                    </form>
+                    <div className="login-footer">
+
+                        <div className="admin-note">
+
+                            <ShieldAlert size={18} />
+
+                            <p>
+                                Manager, HR & CEO Access Only
+                            </p>
+
+                        </div>
+
+
+
+                    </div>
+
+                </div>
+
+            </main>
+
+        </div>
+    );
+}

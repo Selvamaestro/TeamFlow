@@ -52,6 +52,27 @@ async function updateProject(req, res, next) {
   }
 }
 
+// PATCH /projects/:id/progress  (Team Leader of that project ONLY)
+// body: { frontend?, backend?, database? } — each 0-100. project.progress is
+// recomputed server-side as their average.
+async function updateProgress(req, res, next) {
+  try {
+    const { frontend, backend, database } = req.body;
+    if (frontend === undefined && backend === undefined && database === undefined) {
+      return res.status(400).json({ message: "Provide at least one of frontend, backend, database" });
+    }
+
+    const project = await projectService.updateProgress(req.project, req.user, req.projectRoleFlags, {
+      frontend,
+      backend,
+      database,
+    });
+    return res.status(200).json({ project: sanitizeProject(project, req.user.role) });
+  } catch (err) {
+    handleServiceError(err, res, next);
+  }
+}
+
 // POST /projects/:id/members  (Manager, CEO, HR) — member pool for the project
 async function addMembers(req, res, next) {
   try {
@@ -102,13 +123,54 @@ async function addDocument(req, res, next) {
   }
 }
 
+// POST /projects/upload-document (Standalone Cloudinary upload)
+async function uploadDocument(req, res, next) {
+  try {
+    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+
+    return res.status(200).json({
+      document: {
+        name: req.file.originalname,
+        url: req.file.path,
+        uploadedAt: new Date(),
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// DELETE /projects/:id/documents/:documentId
+async function deleteDocument(req, res, next) {
+  try {
+    const project = await projectService.removeDocument(req.project, req.params.documentId);
+    return res.status(200).json({ project: sanitizeProject(project, req.user.role) });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// DELETE /projects/:id (Manager, CEO, HR)
+async function deleteProject(req, res, next) {
+  try {
+    await projectService.deleteProject(req.project);
+    return res.status(200).json({ message: "Project deleted successfully" });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   listProjects,
   getProject,
   createProject,
   updateProject,
+  updateProgress,
+  deleteProject,
   addMembers,
   removeMember,
   setTeamLeader,
   addDocument,
+  deleteDocument,
+  uploadDocument,
 };

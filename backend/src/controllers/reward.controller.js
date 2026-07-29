@@ -1,4 +1,10 @@
 const rewardService = require("../services/reward.service");
+const { POINTS_BY_TYPE, LEVELS } = require("../utils/rewardPoints");
+
+// GET /rewards/meta  (any authenticated user)
+function getMeta(req, res) {
+  return res.status(200).json({ pointsByType: POINTS_BY_TYPE, levels: LEVELS });
+}
 
 // GET /rewards/me  (self)
 async function myRewards(req, res, next) {
@@ -35,4 +41,4 @@ async function createReward(req, res, next) {
   }
 }
 
-module.exports = { myRewards, listRewards, createReward };
+module.exports = { myRewards, listRewards, createReward, getMeta };

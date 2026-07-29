@@ -22,14 +22,15 @@ class NoCheckInFoundError extends Error {
 }
 
 async function checkIn(userId) {
-  const today = startOfDay(new Date());
+  const now = new Date();
+  const today = startOfDay(now);
   const existing = await Attendance.findOne({ user: userId, date: today });
   if (existing) throw new AlreadyCheckedInError();
 
   return Attendance.create({
     user: userId,
     date: today,
-    checkIn: new Date(),
+    checkIn: now,
     status: "present",
   });
 }
@@ -80,11 +81,115 @@ async function listAttendance(requestingUser, { userId, department, date } = {})
   return Attendance.find(filter).populate("user", "name employeeId department").sort({ date: -1 });
 }
 
+async function getAttendanceSummary() {
+  const now = new Date();
+  const today = startOfDay(now);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const totalDaysPassed = now.getDate();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  // Exclude CEO from workforce stats
+  const nonCeoUsers = await User.find({ status: "active", role: { $ne: "ceo" } })
+    .select("_id name employeeId department designation role")
+    .lean();
+
+  const totalEmployees = nonCeoUsers.length;
+  const nonCeoIds = nonCeoUsers.map((u) => u._id);
+
+  // Today's attendance records for non-CEO users
+  const todayRecords = await Attendance.find({
+    user: { $in: nonCeoIds },
+    date: { $gte: today, $lt: tomorrow },
+  }).lean();
+
+  const todayRecordMap = {};
+  todayRecords.forEach((r) => {
+    todayRecordMap[r.user.toString()] = r;
+  });
+
+  const presentUserIds = new Set(
+    todayRecords
+      .filter((r) => ["present", "half_day"].includes(r.status))
+      .map((r) => r.user.toString())
+  );
+
+  const todayPresent = presentUserIds.size;
+  const todayAbsent = Math.max(0, totalEmployees - todayPresent);
+
+  // Monthly attendance records for non-CEO users
+  const monthlyRecords = await Attendance.find({
+    user: { $in: nonCeoIds },
+    date: { $gte: startOfMonth, $lt: tomorrow },
+    status: { $in: ["present", "half_day", "leave"] },
+  }).lean();
+
+  const userPresentCounts = {};
+  monthlyRecords.forEach((r) => {
+    const uid = r.user.toString();
+    userPresentCounts[uid] = (userPresentCounts[uid] || 0) + 1;
+  });
+
+  const presentEmployees = [];
+  const absentEmployees = [];
+
+  const monthlyInsights = nonCeoUsers.map((u) => {
+    const uid = u._id.toString();
+    const pCount = userPresentCounts[uid] || 0;
+    const percentage = totalDaysPassed > 0 ? Math.min(100, Math.round((pCount / totalDaysPassed) * 100)) : 100;
+    const diff = percentage - 85;
+    const trend = diff >= 0 ? `+${diff}%` : `${diff}%`;
+
+    const todayRec = todayRecordMap[uid];
+    const isPresent = presentUserIds.has(uid);
+    const todayStatus = isPresent
+      ? "Present"
+      : (todayRec?.status === "leave" ? "On Leave" : "Absent");
+    const checkInTime = todayRec?.checkIn
+      ? new Date(todayRec.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : null;
+
+    const empData = {
+      id: uid,
+      name: u.name,
+      employeeId: u.employeeId,
+      role: u.designation || u.role,
+      dept: u.department || "General",
+      presentDays: `${pCount} / ${totalDaysPassed} days`,
+      percentage,
+      trend,
+      isPresentToday: isPresent,
+      todayStatus,
+      checkInTime,
+    };
+
+    if (isPresent) {
+      presentEmployees.push(empData);
+    } else {
+      absentEmployees.push(empData);
+    }
+
+    return empData;
+  });
+
+  return {
+    todayPresent,
+    todayAbsent,
+    totalEmployees,
+    monthlyInsights,
+    presentEmployees,
+    absentEmployees,
+  };
+}
+
 module.exports = {
   checkIn,
   checkOut,
   myAttendance,
   listAttendance,
+  getAttendanceSummary,
   AlreadyCheckedInError,
   NoCheckInFoundError,
 };
+

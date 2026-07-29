@@ -46,4 +46,15 @@ async function listAttendance(req, res, next) {
   }
 }
 
-module.exports = { checkIn, checkOut, myAttendance, listAttendance };
+// GET /attendance/summary (HR, Manager, CEO)
+async function getSummary(req, res, next) {
+  try {
+    const summary = await attendanceService.getAttendanceSummary();
+    return res.status(200).json(summary);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { checkIn, checkOut, myAttendance, listAttendance, getSummary };
+

@@ -1,6 +1,10 @@
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
+const Project = require("../models/Project");
+const Attendance = require("../models/Attendance");
+const Reward = require("../models/Reward");
 const conversationService = require("./conversation.service");
+const { levelForScore } = require("./../utils/rewardPoints");
 
 class ForbiddenError extends Error {
   constructor(message) {
@@ -10,8 +14,20 @@ class ForbiddenError extends Error {
 }
 
 async function generateEmployeeId() {
-  const count = await User.countDocuments();
-  return `EMP-${String(count + 1).padStart(4, "0")}`;
+  // Was `EMP-${count+1}` based on User.countDocuments(), which collides as
+  // soon as any user is deleted (or a seed left a gap) since the count no
+  // longer matches the highest ID actually in use. Base it on the highest
+  // existing employeeId instead.
+  const lastUser = await User.findOne({ employeeId: { $exists: true, $ne: null } })
+    .sort({ employeeId: -1 })
+    .select("employeeId")
+    .lean();
+
+  let nextNum = 1;
+  const match = lastUser?.employeeId?.match(/(\d+)\s*$/);
+  if (match) nextNum = parseInt(match[1], 10) + 1;
+
+  return `EMP-${String(nextNum).padStart(4, "0")}`;
 }
 
 async function listUsers(viewerRole, { department, role, status, search, page = 1, limit = 25 } = {}) {
@@ -40,7 +56,46 @@ async function listUsers(viewerRole, { department, role, status, search, page = 
     User.countDocuments(filter),
   ]);
 
-  return { users, total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) };
+ const enrichedUsers = await Promise.all(
+  users.map(async (user) => {
+    // Find current project
+    const project = await Project.findOne({
+      members: user._id,
+    });
+
+    // Count attendance records
+    const attendanceCount = await Attendance.countDocuments({
+      user: user._id,
+      status: "present",
+    });
+
+    // Calculate total reward points
+    const rewards = await Reward.find({
+      user: user._id,
+    });
+
+    const rewardScore = rewards.reduce(
+      (sum, reward) => sum + reward.points,
+      0
+    );
+
+    return {
+      ...user.toObject(),
+      currentProject: project?.title || "-",
+      attendance: attendanceCount,
+      rewardScore,
+      rewardLevel: levelForScore(rewardScore),
+    };
+  })
+);
+
+return {
+  users: enrichedUsers,
+  total,
+  page: pageNum,
+  limit: limitNum,
+  totalPages: Math.ceil(total / limitNum),
+};
 }
 
 // HR, Manager, CEO, self
@@ -48,9 +103,40 @@ async function getUserById(id, viewer) {
   if (!["hr", "manager", "ceo"].includes(viewer.role) && viewer.id !== id) {
     throw new ForbiddenError("Forbidden");
   }
-  return User.findById(id).select("+salary");
-}
 
+  const user = await User.findById(id).select("+salary");
+
+  if (!user) return null;
+
+  // Current projects
+  const projects = await Project.find({
+    members: user._id,
+  }).select("title status progress");
+
+  // Attendance count
+  const attendance = await Attendance.countDocuments({
+    user: user._id,
+    status: "present",
+  });
+
+  // Reward score
+  const rewards = await Reward.find({
+    user: user._id,
+  });
+
+  const rewardScore = rewards.reduce(
+    (sum, reward) => sum + reward.points,
+    0
+  );
+
+  return {
+    ...user.toObject(),
+    projects,
+    attendance,
+    rewardScore,
+    rewardLevel: levelForScore(rewardScore),
+  };
+}
 // side effects: adds the new user to the global channel once, and — if they're
 // themself an admin (ceo/manager) — backfills them into every existing project chat
 async function createUser(data) {
@@ -60,21 +146,32 @@ async function createUser(data) {
   } = data;
 
   const passwordHash = await bcrypt.hash(password, 10);
-  const employeeId = await generateEmployeeId();
 
-  const user = await User.create({
-    employeeId,
-    name,
-    email,
-    passwordHash,
-    phone,
-    department,
-    designation,
-    employmentType,
-    joiningDate,
-    reportingManager: reportingManager || null,
-    role,
-  });
+  let user;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const employeeId = await generateEmployeeId();
+    try {
+      user = await User.create({
+        employeeId,
+        name,
+        email,
+        passwordHash,
+        phone,
+        department,
+        designation,
+        employmentType,
+        joiningDate,
+        reportingManager: reportingManager || null,
+        role,
+      });
+      break;
+    } catch (err) {
+      // Duplicate key on employeeId specifically (not email) -> another
+      // request grabbed the same next-number in the same instant; retry.
+      const isEmployeeIdClash = err?.code === 11000 && Object.keys(err?.keyPattern || {}).includes("employeeId");
+      if (!isEmployeeIdClash || attempt === 2) throw err;
+    }
+  }
 
   await conversationService.addUserToGlobalChannel(user._id);
   if (conversationService.ADMIN_ROLES.includes(user.role)) {

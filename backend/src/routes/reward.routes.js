@@ -7,6 +7,7 @@ const ctrl = require("../controllers/reward.controller");
 router.use(authenticate);
 
 router.get("/me", ctrl.myRewards);
+router.get("/meta", ctrl.getMeta);
 router.get("/", requireRole(["hr", "manager", "ceo"]), ctrl.listRewards);
 router.post("/", requireRole(["manager", "hr", "ceo"]), ctrl.createReward);
 

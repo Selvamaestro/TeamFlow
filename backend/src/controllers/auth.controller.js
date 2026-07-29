@@ -40,7 +40,30 @@ async function login(req, res, next) {
     next(err);
   }
 }
+// PUT /api/auth/profile
+async function updateProfile(req, res, next) {
+    try {
 
+        const { name, email, phone } = req.body;
+
+        const user = await authService.updateProfile(
+            req.user.id,
+            {
+                name,
+                email,
+                phone,
+            }
+        );
+
+        return res.status(200).json({
+            message: "Profile updated successfully",
+            user: sanitizeUser(user, req.user.role),
+        });
+
+    } catch (err) {
+        next(err);
+    }
+}
 // POST /api/auth/logout
 async function logout(req, res, next) {
   try {
@@ -61,5 +84,49 @@ async function me(req, res, next) {
     next(err);
   }
 }
+async function changePassword(req, res, next) {
+    try {
+        const user = await authService.changePassword(
+    req.user.id,
+    req.body.currentPassword,
+    req.body.newPassword
+);
 
-module.exports = { login, logout, me };
+        res.json({
+            success: true,
+            message: "Password updated successfully",
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+async function uploadAvatar(req, res, next) {
+
+    try {
+
+        const user = await authService.uploadAvatar(
+    req.user.id,
+    req.file.filename
+);
+
+        res.json({
+            success: true,
+            user,
+        });
+
+    } catch (err) {
+
+        next(err);
+
+    }
+
+}
+
+module.exports = {
+    login,
+    logout,
+    me,
+    updateProfile,
+    changePassword,
+    uploadAvatar,
+};

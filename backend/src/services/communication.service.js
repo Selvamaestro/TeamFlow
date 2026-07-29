@@ -66,29 +66,34 @@ async function listMessages(conversationId, userId, { before, limit } = {}) {
 
   const messages = await Message.find(filter)
     .sort({ createdAt: -1 })
-    .limit(Number(limit) || 50);
+    .limit(Number(limit) || 50)
+    .populate("sender", "name avatarUrl role");
 
   return messages.reverse();
 }
 
 // persisted via REST, then broadcast in real time over Socket.IO
-async function createMessage(io, conversationId, senderId, { content, attachmentUrl }) {
+async function createMessage(io, conversationId, senderId, { content, attachmentUrl, attachmentName, attachmentType }) {
   const conversation = await assertParticipant(conversationId, senderId);
 
   if (!content && !attachmentUrl) {
     throw new BadRequestError("content or attachmentUrl is required");
   }
 
-  const message = await Message.create({
+  let message = await Message.create({
     conversation: conversation._id,
     sender: senderId,
     content,
     attachmentUrl,
+    attachmentName,
+    attachmentType,
     readBy: [senderId],
   });
 
   conversation.lastMessageAt = new Date();
   await conversation.save();
+
+  message = await message.populate("sender", "name avatarUrl role");
 
   if (io) {
     io.to(`conversation:${conversation._id}`).emit("message:new", message);

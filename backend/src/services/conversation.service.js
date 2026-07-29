@@ -66,6 +66,16 @@ async function addUserToAllProjectGroups(userId) {
 }
 
 /**
+ * Adds a single (newly created) ceo/manager user as a *member* of every
+ * existing project, so they immediately show up in the assigned-members
+ * list too, not just the project chat.
+ */
+async function addUserToAllProjectsAsMember(userId) {
+  const Project = require("../models/Project");
+  await Project.updateMany({}, { $addToSet: { members: userId } });
+}
+
+/**
  * Builds the initial participant list for a brand-new project_group conversation:
  * every ceo/manager, deduplicated.
  */
@@ -81,5 +91,6 @@ module.exports = {
   getOrCreateGlobalConversation,
   addUserToGlobalChannel,
   addUserToAllProjectGroups,
+  addUserToAllProjectsAsMember,
   buildProjectGroupParticipants,
 };

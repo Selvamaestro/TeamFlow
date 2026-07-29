@@ -1,5 +1,48 @@
 const LeaveRequest = require("../models/LeaveRequest");
+const Attendance = require("../models/Attendance");
 const notify = require("../utils/notify");
+
+function getDatesInRange(start, end) {
+  const dates = [];
+  if (!start) return dates;
+  const s = new Date(start);
+  s.setHours(0, 0, 0, 0);
+  const e = end ? new Date(end) : new Date(s);
+  e.setHours(0, 0, 0, 0);
+
+  let current = new Date(s);
+  while (current <= e) {
+    dates.push(new Date(current));
+    current.setDate(current.getDate() + 1);
+  }
+  return dates;
+}
+
+async function syncLeaveToAttendance(leaveRequest, status) {
+  if (!leaveRequest || !leaveRequest.startDate) return;
+  const dates = getDatesInRange(leaveRequest.startDate, leaveRequest.endDate);
+
+  if (status === "approved") {
+    for (const d of dates) {
+      await Attendance.findOneAndUpdate(
+        { user: leaveRequest.user, date: d },
+        {
+          $setOnInsert: { user: leaveRequest.user, date: d },
+          $set: { status: "leave" },
+        },
+        { upsert: true, new: true }
+      );
+    }
+  } else if (status === "rejected") {
+    for (const d of dates) {
+      await Attendance.deleteMany({
+        user: leaveRequest.user,
+        date: d,
+        status: "leave",
+      });
+    }
+  }
+}
 
 async function createLeave(userId, { type, startDate, endDate, reason }) {
   return LeaveRequest.create({ user: userId, type, startDate, endDate, reason });
@@ -25,6 +68,9 @@ async function decideLeave(app, id, status, reviewerId) {
   leaveRequest.reviewedBy = reviewerId;
   await leaveRequest.save();
 
+  // Sync attendance records for approved / rejected leave
+  await syncLeaveToAttendance(leaveRequest, status);
+
   await notify(app, {
     user: leaveRequest.user,
     type: "leave_status",
@@ -36,4 +82,4 @@ async function decideLeave(app, id, status, reviewerId) {
   return leaveRequest;
 }
 
-module.exports = { createLeave, myLeave, listLeave, decideLeave };
+module.exports = { createLeave, myLeave, listLeave, decideLeave, syncLeaveToAttendance };

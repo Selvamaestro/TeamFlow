@@ -57,4 +57,20 @@ async function createMessage(req, res, next) {
   }
 }
 
-module.exports = { listConversations, createConversation, listMessages, createMessage };
+// POST /conversations/upload-attachment (multipart -> Cloudinary), then the client
+// sends the returned url/name/type along with POST /conversations/:id/messages
+async function uploadAttachment(req, res, next) {
+  try {
+    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+
+    return res.status(200).json({
+      attachmentUrl: req.file.path,
+      attachmentName: req.file.originalname,
+      attachmentType: req.file.mimetype,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { listConversations, createConversation, listMessages, createMessage, uploadAttachment };

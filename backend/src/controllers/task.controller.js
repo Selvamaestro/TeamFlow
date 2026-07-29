@@ -46,7 +46,7 @@ async function createTask(req, res, next) {
 // PATCH /tasks/:id/status
 async function updateTaskStatus(req, res, next) {
   try {
-    const task = await taskService.updateTaskStatus(req.params.id, req.user, req.body);
+    const task = await taskService.updateTaskStatus(req.app, req.params.id, req.user, req.body);
     if (!task) return res.status(404).json({ message: "Task not found" });
     return res.status(200).json({ task });
   } catch (err) {

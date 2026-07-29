@@ -10,8 +10,10 @@ router.use(authenticate);
 
 router.get("/", ctrl.listProjects);
 router.get("/:id", requireProjectAccess, ctrl.getProject);
+router.delete("/:id", requireRole(["manager", "ceo", "hr"]), requireProjectAccess, ctrl.deleteProject);
 router.post("/", requireRole(["manager", "ceo", "hr"]), ctrl.createProject);
 router.patch("/:id", requireProjectAccess, ctrl.updateProject);
+router.patch("/:id/progress", requireProjectAccess, ctrl.updateProgress);
 router.post("/:id/members", requireRole(["manager", "ceo", "hr"]), requireProjectAccess, ctrl.addMembers);
 router.delete(
   "/:id/members/:userId",
@@ -26,10 +28,20 @@ router.post(
   ctrl.setTeamLeader
 );
 router.post(
+  "/upload-document",
+  uploadProjectDocument.single("document"),
+  ctrl.uploadDocument
+);
+router.post(
   "/:id/documents",
   requireProjectAccess,
   uploadProjectDocument.single("document"),
   ctrl.addDocument
+);
+router.delete(
+  "/:id/documents/:documentId",
+  requireProjectAccess,
+  ctrl.deleteDocument
 );
 
 module.exports = router;

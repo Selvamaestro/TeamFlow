@@ -2,6 +2,7 @@ const Task = require("../models/Task");
 const Project = require("../models/Project");
 const Conversation = require("../models/Conversation");
 const notify = require("../utils/notify");
+const rewardService = require("./reward.service");
 
 class ForbiddenError extends Error {
   constructor(message) {
@@ -30,7 +31,10 @@ async function listTasks(project, projectRoleFlags, userId, { status } = {}) {
     filter.assignedTo = userId;
   }
 
-  return Task.find(filter).sort({ createdAt: -1 });
+  return Task.find(filter)
+    .populate("assignedTo", "name email employeeId avatarUrl designation role")
+    .populate("assignedBy", "name email employeeId avatarUrl designation role")
+    .sort({ updatedAt: -1 });
 }
 
 async function getTaskForViewer(taskId, viewer) {
@@ -53,16 +57,18 @@ async function getTaskForViewer(taskId, viewer) {
 // enforce: assignedTo must be in project.members; requester must be project.teamLeader or manager/ceo
 // side effect: assignedTo is added to the project_group Conversation participants if not already there
 async function createTask(app, project, requester, { title, description, assignedTo, dueDate, priority }) {
-  const isTeamLeader = project.teamLeader && project.teamLeader.toString() === requester.id;
+  const isTeamLeader = !!project.teamLeader && String(project.teamLeader._id || project.teamLeader) === requester.id;
   const isPrivileged = isPrivilegedRole(requester.role);
 
   if (!isTeamLeader && !isPrivileged) {
     throw new ForbiddenError("Only the project's Team Leader (or Manager/CEO) can assign tasks");
   }
 
-  const isMember = project.members.some((m) => m.toString() === assignedTo);
-  if (!isMember) {
-    throw new BadRequestError("assignedTo must be one of project.members");
+  const isMember = project.members.some((m) => String(m._id || m) === assignedTo);
+  const teamLeaderId = project.teamLeader ? String(project.teamLeader._id || project.teamLeader) : null;
+  const isSelfAssignByTeamLeader = isTeamLeader && assignedTo === teamLeaderId;
+  if (!isMember && !isSelfAssignByTeamLeader) {
+    throw new BadRequestError("assignedTo must be one of project.members (or the Team Leader themselves)");
   }
 
   const task = await Task.create({
@@ -97,7 +103,7 @@ const REVIEWER_TRANSITIONS = ["approved", "rejected"];
 const VALID_STATUSES = ["todo", "in_progress", "submitted", "approved", "rejected"];
 
 // assignee (self only, to in_progress/submitted); Team Leader/manager (to approved/rejected)
-async function updateTaskStatus(taskId, requester, { status, submissionNote }) {
+async function updateTaskStatus(app, taskId, requester, { status, submissionNote }) {
   if (!VALID_STATUSES.includes(status)) {
     throw new BadRequestError("Invalid status");
   }
@@ -121,6 +127,10 @@ async function updateTaskStatus(taskId, requester, { status, submissionNote }) {
   task.status = status;
   if (submissionNote !== undefined) task.submissionNote = submissionNote;
   await task.save();
+
+  if (status === "approved") {
+    await rewardService.autoAwardForTask(app, task, requester.id);
+  }
 
   return task;
 }
